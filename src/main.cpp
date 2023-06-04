@@ -8,18 +8,18 @@
 #include <fstream>
 
 #include "conv/codegen.hpp"
+#include "conv/lexer.hpp"
 #include "conv/parser.hpp"
 #include "conv/ssa.hpp"
 #include "conv/typeck.hpp"
 #include "passes/pass_manager.hpp"
 
-
 int main(int argc, char *argv[]) {
-  bool opt = false, print_usage = false, print_pass = false;
+  bool opt = false, print_usage = false, print_pass = false, dump_token = false;
   char *src = nullptr, *output = nullptr, *ir_file = nullptr;
 
   // parse command line options and check
-  for (int ch; (ch = getopt(argc, argv, "Sdpl:o:O:h")) != -1;) {
+  for (int ch; (ch = getopt(argc, argv, "Sdpl:o:O:ht")) != -1;) {
     switch (ch) {
       case 'S':
         // do nothing
@@ -42,6 +42,9 @@ int main(int argc, char *argv[]) {
       case 'h':
         print_usage = true;
         break;
+      case 't':
+        dump_token = true;
+        break;
       default:
         break;
     }
@@ -59,50 +62,46 @@ int main(int argc, char *argv[]) {
   }
 
   if (src == nullptr || print_usage) {
-    fprintf(stderr, "Usage: %s [-l ir_file] [-S] [-p (print passes)] [-d (debug mode)] [-o output_file] [-O level] input_file\n", argv[0]);
+    fprintf(
+        stderr,
+        "Usage: %s [-l ir_file] [-S] [-p (print passes)] [-d (debug mode)] [-o output_file] [-O level] input_file\n",
+        argv[0]);
     return !print_usage && SYSTEM_ERROR;
   }
 
-  // open input file
-  int fd = open(src, O_RDONLY);
-  if (fd < 0) {
-    fprintf(stderr, "failed to open %s\n", src);
-    return SYSTEM_ERROR;
-  }
-  struct stat st {};
-  fstat(fd, &st);
-  char *input = (char *)mmap(nullptr, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+  std::ifstream ifs(src);
+  Lexer lexer(&ifs);
 
-  // run lexer
-  Lexer l(std::string_view(input, st.st_size));
-  auto result = Parser{}.parse(l);
-
-  // run parser
-  if (Program *p = std::get_if<0>(&result)) {
-    dbg("parsing success");
-    type_check(*p);  // 失败时直接就exit(1)了
-    dbg("type_check success");
-    auto *ir = convert_ssa(*p);
-    run_passes(ir, opt);
-    if (ir_file != nullptr) {
-      std::ofstream(ir_file) << *ir;
-    }
-    if (output != nullptr) {
-      auto *code = machine_code_generation(ir);
-      run_passes(code, opt);
-      std::ofstream(output) << *code;
-    }
-  } else if (Token *t = std::get_if<1>(&result)) {
-    ERR_EXIT(PARSING_ERROR, "parsing error", t->kind, t->line, t->col, t->piece);
+  if (dump_token) {
+    lexer.DumpTokens();
+    return 0;
   }
 
-  // post-precess
-  munmap(input, st.st_size);
+  Parser parser(lexer);
+  Stmt *expr = parser.ParseStmt();
+  assert(expr);
+
+  // // run parser
+  // if (Program *p = std::get_if<0>(&result)) {
+  //   dbg("parsing success");
+  //   type_check(*p);  // 失败时直接就 exit(1) 了
+  //   dbg("type_check success");
+  //   auto *ir = convert_ssa(*p);
+  //   run_passes(ir, opt);
+  //   if (ir_file != nullptr) {
+  //     std::ofstream(ir_file) << *ir;
+  //   }
+  //   if (output != nullptr) {
+  //     auto *code = machine_code_generation(ir);
+  //     run_passes(code, opt);
+  //     std::ofstream(output) << *code;
+  //   }
+  // } else if (Token *t = std::get_if<1>(&result)) {
+  //   ERR_EXIT(PARSING_ERROR, "parsing error", t->kind, t->line, t->col, t->piece);
+  // }
+
   free(output);
   free(ir_file);
 
   return 0;
 }
-
-// ASan config
-extern "C" [[maybe_unused]] const char *__asan_default_options() { return "detect_leaks=0"; }
