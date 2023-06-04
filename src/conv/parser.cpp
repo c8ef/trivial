@@ -49,6 +49,48 @@ Stmt *Parser::ParseStmt() {
   if (IsTokenChar(';')) {
     return ParseEmptyStmt();
   }
+
+  if (cur_token_ == Token::Keyword) {
+    switch (lexer_.key_val()) {
+      case Keyword::If:
+        return ParseIfElse();
+      case Keyword::While:
+        return ParseWhile();
+      case Keyword::Break:
+        NextToken();
+        if (!ExpectChar(';')) {
+          return nullptr;
+        }
+        return &Break::INSTANCE;
+      case Keyword::Continue:
+        NextToken();
+        if (!ExpectChar(';')) {
+          return nullptr;
+        }
+        return &Continue::INSTANCE;
+      case Keyword::Return: {
+        NextToken();
+        Expr *expr = nullptr;
+        if (!IsTokenChar(';')) {
+          expr = ParseExpr();
+          if (!expr) {
+            return nullptr;
+          }
+        }
+        if (!ExpectChar(';')) {
+          return nullptr;
+        }
+        if (expr) {
+          return new Return{Stmt::Return, expr};
+        } else {
+          return new Return{Stmt::Return, nullptr};
+        }
+      }
+      default:
+        assert(false);
+    }
+  }
+
   return ParseBare();
 }
 
@@ -59,6 +101,17 @@ Stmt *Parser::ParseEmptyStmt() {
 
 Stmt *Parser::ParseBare() {
   auto *expr = ParseExpr();
+  if (expr->tag == Expr::Index && IsTokenOperator(Operator::Assign)) {
+    NextToken();
+    auto *rhs = ParseExpr();
+    if (!rhs) {
+      return nullptr;
+    }
+    if (!ExpectChar(';')) {
+      return nullptr;
+    }
+    return new Assign{Stmt::Assign, ((Index *)expr)->name, ((Index *)expr)->dims, rhs};
+  }
   if (!expr) {
     return nullptr;
   }
@@ -84,6 +137,38 @@ Stmt *Parser::ParseBlock() {
 
   NextToken();
   return new Block{Stmt::Block, stmts};
+}
+
+Stmt *Parser::ParseIfElse() {
+  NextToken();
+
+  if (!ExpectChar('(')) return nullptr;
+  auto cond = ParseExpr();
+  if (!ExpectChar(')')) return nullptr;
+
+  auto then = ParseStmt();
+  if (!then) return nullptr;
+
+  Stmt *else_then = nullptr;
+  if (IsTokenKeyword(Keyword::Else)) {
+    NextToken();
+    else_then = ParseStmt();
+    if (!else_then) return nullptr;
+  }
+  return new If{Stmt::If, cond, then, else_then};
+}
+
+Stmt *Parser::ParseWhile() {
+  NextToken();
+
+  if (!ExpectChar('(')) return nullptr;
+  auto cond = ParseExpr();
+  if (!ExpectChar(')')) return nullptr;
+
+  auto body = ParseStmt();
+  if (!body) return nullptr;
+
+  return new While{Stmt::While, cond, body};
 }
 
 Expr *Parser::ParseExpr() {

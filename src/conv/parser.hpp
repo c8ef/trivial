@@ -27,6 +27,8 @@ class Parser {
   Stmt *ParseEmptyStmt();
   Stmt *ParseBare();
   Stmt *ParseBlock();
+  Stmt *ParseIfElse();
+  Stmt *ParseWhile();
 
   Expr *ParseExpr();
   Expr *ParseUnary();

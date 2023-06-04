@@ -12,7 +12,7 @@ struct Func;
 
 struct Expr {
   enum Tag {
-#include "op.inc" // Binary
+#include "op.inc"  // Binary
     Call,
     Index,
     IntConst
@@ -50,11 +50,8 @@ struct Call : Expr {
   // do some simple preprocess in constructor
   explicit Call(std::string_view func, std::vector<Expr *> args, u32 line_no) : Expr{Tag::Call, 0}, func(func) {
     // map some builtin function names
-    constexpr static std::pair<std::string_view, std::string_view> func_mapping[3] {
-      {"starttime", "_sysy_starttime"},
-      {"stoptime", "_sysy_stoptime"},
-      {"putf", "printf"}
-    };
+    constexpr static std::pair<std::string_view, std::string_view> func_mapping[3]{
+        {"starttime", "_sysy_starttime"}, {"stoptime", "_sysy_stoptime"}, {"putf", "printf"}};
 
     for (auto [origin, replace] : func_mapping) {
       if (func == origin) {
@@ -67,12 +64,11 @@ struct Call : Expr {
     // modify parameters
     if (this->func == "_sysy_starttime" || this->func == "_sysy_stoptime") {
       // manually add line number as parameter
-      this->args.push_back(new ::IntConst{Tag::IntConst, 0, (i32) line_no});
+      this->args.push_back(new ::IntConst{Tag::IntConst, 0, (i32)line_no});
     } else {
       this->args = std::move(args);
     }
   }
-
 };
 
 struct InitList {
@@ -100,9 +96,7 @@ struct Decl {
   // 经过mem2reg后，参数和局部变量中的int将不再需要这个AllocaInst
   Value *value;
 
-  bool is_param_array() const {
-    return !dims.empty() && dims[0] == nullptr;
-  }
+  bool is_param_array() const { return !dims.empty() && dims[0] == nullptr; }
 };
 
 struct Stmt {
