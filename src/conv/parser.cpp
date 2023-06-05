@@ -407,13 +407,13 @@ Expr *Parser::ParseUnary() {
     switch (lexer_.op_val()) {
       case Operator::Add:
         NextToken();
-        return ParseFactor();
+        return ParseUnary();
       case Operator::Sub:
         NextToken();
-        return new Binary{Expr::Sub, 0, &IntConst::ZERO, ParseFactor()};
+        return new Binary{Expr::Sub, 0, &IntConst::ZERO, ParseUnary()};
       case Operator::LogicNot:
         NextToken();
-        return new Binary{Expr::Eq, 0, &IntConst::ZERO, ParseFactor()};
+        return new Binary{Expr::Eq, 0, &IntConst::ZERO, ParseUnary()};
       default:
         std::cerr << "expect unary operator\n";
         return nullptr;
