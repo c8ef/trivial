@@ -193,6 +193,7 @@ InitList Parser::ParseInitList() {
     if (!IsTokenChar(',')) {
       break;
     }
+    NextToken();
   }
 
   if (!ExpectChar('}')) {
