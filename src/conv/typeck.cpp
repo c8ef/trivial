@@ -9,7 +9,7 @@
 #include "../common.hpp"
 #include "../structure/op.hpp"
 
-#define ERR(...) ERR_EXIT(TYPE_CHECK_ERROR, __VA_ARGS__)
+#define ERR(...) ERR_EXIT(kTypeCheckError, __VA_ARGS__)
 
 // 有两种可能的符号：函数和变量，逻辑上需要一个variant<Func *, Decl
 // *>，但是这太浪费空间了

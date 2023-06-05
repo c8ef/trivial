@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
             "Usage: %s [-l ir_file] [-S] [-p (print passes)] [-d (debug mode)] "
             "[-o output_file] [-O level] input_file\n",
             argv[0]);
-    return !print_usage && SYSTEM_ERROR;
+    return !print_usage && kSystemError;
   }
 
   std::ifstream ifs(src);
