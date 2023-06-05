@@ -2,7 +2,7 @@
 
 #include "../../structure/ast.hpp"
 
-void compute_callgraph(IrProgram *p) {
+void compute_callgraph(IrProgram* p) {
   for (auto f = p->func.head; f; f = f->next) {
     f->callee_func.clear();
     f->caller_func.clear();
@@ -15,9 +15,11 @@ void compute_callgraph(IrProgram *p) {
         if (auto x = dyn_cast<CallInst>(inst)) {
           f->callee_func.insert(x->func);
           x->func->caller_func.insert(f);
-        } else if (auto x = dyn_cast<LoadInst>(inst); x && x->lhs_sym->is_glob) {
+        } else if (auto x = dyn_cast<LoadInst>(inst);
+                   x && x->lhs_sym->is_glob) {
           f->load_global = true;
-        } else if (auto x = dyn_cast<StoreInst>(inst); x && (x->lhs_sym->is_glob || x->lhs_sym->is_param_array())) {
+        } else if (auto x = dyn_cast<StoreInst>(inst);
+                   x && (x->lhs_sym->is_glob || x->lhs_sym->is_param_array())) {
           f->has_side_effect = true;
         }
       }
@@ -25,7 +27,7 @@ void compute_callgraph(IrProgram *p) {
   }
 
   // propagate impure from callees to callers
-  std::vector<IrFunc *> work_list;
+  std::vector<IrFunc*> work_list;
   for (auto f = p->func.head; f; f = f->next) {
     if (f->has_side_effect) {
       work_list.push_back(f);
@@ -33,7 +35,7 @@ void compute_callgraph(IrProgram *p) {
   }
 
   while (!work_list.empty()) {
-    auto *f = work_list.back();
+    auto* f = work_list.back();
     work_list.pop_back();
     for (auto caller : f->caller_func) {
       if (!caller->has_side_effect) {
@@ -44,8 +46,9 @@ void compute_callgraph(IrProgram *p) {
   }
 
   for (auto f = p->func.head; f; f = f->next) {
-    auto func_purity = "function " + std::string(f->func->name) + " has " + (f->has_side_effect ? "" : "no ")
-                       + "side effect, is " + (f->pure() ? "pure" : "impure");
+    auto func_purity = "function " + std::string(f->func->name) + " has " +
+                       (f->has_side_effect ? "" : "no ") + "side effect, is " +
+                       (f->pure() ? "pure" : "impure");
     dbg(func_purity);
   }
 }

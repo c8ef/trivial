@@ -16,7 +16,7 @@ enum class NumberType {
 
 // get index of a string in string array
 template <typename T, std::size_t N>
-int GetIndex(const char *str, T (&str_array)[N]) {
+int GetIndex(const char* str, T (&str_array)[N]) {
   for (std::size_t i = 0; i < N; ++i) {
     if (!std::strcmp(str, str_array[i])) return i;
   }
@@ -25,7 +25,7 @@ int GetIndex(const char *str, T (&str_array)[N]) {
 
 bool IsOperatorHeadChar(char c) {
   const char op_head_chars[] = "+-*/%=!<>&|~^.";
-  for (const auto &i : op_head_chars) {
+  for (const auto& i : op_head_chars) {
     if (i == c) return true;
   }
   return false;
@@ -33,7 +33,7 @@ bool IsOperatorHeadChar(char c) {
 
 bool IsOperatorChar(char c) {
   const char op_chars[] = "=&|<>";
-  for (const auto &i : op_chars) {
+  for (const auto& i : op_chars) {
     if (i == c) return true;
   }
   return false;
@@ -91,7 +91,8 @@ Token Lexer::HandleNum() {
     NextChar();
   }
   // convert to number
-  auto [ptr, ec] = std::from_chars(num.data(), num.data() + num.size(), int_val_, static_cast<int>(num_type));
+  auto [ptr, ec] = std::from_chars(num.data(), num.data() + num.size(),
+                                   int_val_, static_cast<int>(num_type));
   // check if conversion is valid
   return ec == std::errc() ? Token::Int : LogError("invalid number literal");
 }
@@ -164,7 +165,7 @@ void Lexer::Reset() {
   *in_ >> std::noskipws;
 }
 
-void Lexer::Reset(std::istream *in) {
+void Lexer::Reset(std::istream* in) {
   in_ = in;
   Reset();
 }
@@ -202,10 +203,12 @@ void Lexer::DumpTokens() {
         std::cout << "token{Int}: " << int_val_ << '\n';
         break;
       case Token::Keyword:
-        std::cout << "token{keyword}: " << kKeywords[static_cast<int>(key_val_)] << '\n';
+        std::cout << "token{keyword}: " << kKeywords[static_cast<int>(key_val_)]
+                  << '\n';
         break;
       case Token::Operator:
-        std::cout << "token{operator}: " << kOperators[static_cast<int>(op_val_)] << '\n';
+        std::cout << "token{operator}: "
+                  << kOperators[static_cast<int>(op_val_)] << '\n';
         break;
       case Token::Other:
         std::cout << "token{other}: " << other_val_ << '\n';

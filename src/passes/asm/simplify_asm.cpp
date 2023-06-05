@@ -8,7 +8,8 @@ void simplify_asm(MachineFunc* f) {
           dbg("Removed identity move");
           bb->insts.remove(inst);
         } else if (auto y = dyn_cast_nullable<MIMove>(inst->next)) {
-          if (y->dst.is_equiv(x->dst) && !y->rhs.is_equiv(x->dst) && y->is_simple()) {
+          if (y->dst.is_equiv(x->dst) && !y->rhs.is_equiv(x->dst) &&
+              y->is_simple()) {
             dbg("Removed useless move");
             bb->insts.remove(inst);
           }
@@ -25,7 +26,8 @@ void simplify_asm(MachineFunc* f) {
         }
       } else if (auto x = dyn_cast<MILoad>(inst)) {
         if (auto y = dyn_cast_nullable<MIStore>(x->prev)) {
-          if (x->addr.is_equiv(y->addr) && x->offset == y->offset && x->shift == y->shift && x->mode == y->mode) {
+          if (x->addr.is_equiv(y->addr) && x->offset == y->offset &&
+              x->shift == y->shift && x->mode == y->mode) {
             // match:
             // str r0, [r1, #0]
             // ldr r2, [r1, #0]
@@ -41,9 +43,12 @@ void simplify_asm(MachineFunc* f) {
       } else if (auto x = dyn_cast<MICompare>(inst)) {
         if (auto y = dyn_cast_nullable<MIMove>(x->next)) {
           if (auto z = dyn_cast_nullable<MIMove>(y->next)) {
-            if (x->rhs == MachineOperand::I(0) && y->rhs == MachineOperand::I(1) && z->rhs == MachineOperand::I(0) &&
-                x->lhs.is_equiv(y->dst) && x->lhs.is_equiv(z->dst) && y->cond == ArmCond::Ne &&
-                z->cond == ArmCond::Eq && y->shift.is_none() && z->shift.is_none()) {
+            if (x->rhs == MachineOperand::I(0) &&
+                y->rhs == MachineOperand::I(1) &&
+                z->rhs == MachineOperand::I(0) && x->lhs.is_equiv(y->dst) &&
+                x->lhs.is_equiv(z->dst) && y->cond == ArmCond::Ne &&
+                z->cond == ArmCond::Eq && y->shift.is_none() &&
+                z->shift.is_none()) {
               // match:
               // cmp	r1, #0
               // movne	r1, #1

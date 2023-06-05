@@ -23,12 +23,13 @@
 #include "ir/remove_identical_branch.hpp"
 #include "ir/remove_unused_function.hpp"
 
-using IrFuncPass = void (*)(IrFunc *);
-using IrProgramPass = void (*)(IrProgram *);
-using MachineFuncPass = void (*)(MachineFunc *);
-using MachineProgramPass = void (*)(MachineProgram *);
-using CompilePass = std::variant<IrFuncPass, IrProgramPass, MachineFuncPass, MachineProgramPass>;
-using PassDesc = std::pair<CompilePass, const char *>;
+using IrFuncPass = void (*)(IrFunc*);
+using IrProgramPass = void (*)(IrProgram*);
+using MachineFuncPass = void (*)(MachineFunc*);
+using MachineProgramPass = void (*)(MachineProgram*);
+using CompilePass = std::variant<IrFuncPass, IrProgramPass, MachineFuncPass,
+                                 MachineProgramPass>;
+using PassDesc = std::pair<CompilePass, const char*>;
 
 #define DEFINE_PASS(p) \
   { p, #p }
@@ -56,9 +57,10 @@ static PassDesc ir_passes[] = {
     DEFINE_PASS(remove_unused_function),
 };
 
-static PassDesc asm_passes[] = {DEFINE_PASS(allocate_register), DEFINE_PASS(simplify_asm),
-                                DEFINE_PASS(compute_stack_info), DEFINE_PASS(instruction_schedule),
-                                DEFINE_PASS(simplify_asm), DEFINE_PASS(if_to_cond)};
+static PassDesc asm_passes[] = {
+    DEFINE_PASS(allocate_register),  DEFINE_PASS(simplify_asm),
+    DEFINE_PASS(compute_stack_info), DEFINE_PASS(instruction_schedule),
+    DEFINE_PASS(simplify_asm),       DEFINE_PASS(if_to_cond)};
 
 #undef DEFINE_PASS
 
@@ -67,41 +69,46 @@ struct overloaded : Ts... {
   using Ts::operator()...;
 };
 template <class... Ts>
-overloaded(Ts...)->overloaded<Ts...>;
+overloaded(Ts...) -> overloaded<Ts...>;
 
-static inline void run_pass(IntermediateProgram p, const PassDesc &desc) {
-  auto &pass = std::get<0>(desc);
+static inline void run_pass(IntermediateProgram p, const PassDesc& desc) {
+  auto& pass = std::get<0>(desc);
   auto run_pass = std::string("Running pass ") + std::get<1>(desc);
   dbg(run_pass);
-  std::visit(overloaded{[&](IrProgram *p) {
-                          std::visit(overloaded{[&](IrFuncPass pass) {
-                                                  for (auto *f = p->func.head; f != nullptr; f = f->next) {
-                                                    if (!f->builtin) pass(f);
-                                                  }
-                                                },
-                                                [&](IrProgramPass pass) { pass(p); }, [](auto arg) { UNREACHABLE(); }},
-                                     pass);
-                        },
-                        [&](MachineProgram *p) {
-                          std::visit(
-                              overloaded{[&](MachineFuncPass pass) {
-                                           for (auto *f = p->func.head; f != nullptr; f = f->next) {
-                                             pass(f);
+  std::visit(
+      overloaded{[&](IrProgram* p) {
+                   std::visit(overloaded{[&](IrFuncPass pass) {
+                                           for (auto* f = p->func.head;
+                                                f != nullptr; f = f->next) {
+                                             if (!f->builtin) pass(f);
                                            }
                                          },
-                                         [&](MachineProgramPass pass) { pass(p); }, [](auto arg) { UNREACHABLE(); }},
+                                         [&](IrProgramPass pass) { pass(p); },
+                                         [](auto arg) { UNREACHABLE(); }},
                               pass);
-                        }},
-             p);
+                 },
+                 [&](MachineProgram* p) {
+                   std::visit(
+                       overloaded{[&](MachineFuncPass pass) {
+                                    for (auto* f = p->func.head; f != nullptr;
+                                         f = f->next) {
+                                      pass(f);
+                                    }
+                                  },
+                                  [&](MachineProgramPass pass) { pass(p); },
+                                  [](auto arg) { UNREACHABLE(); }},
+                       pass);
+                 }},
+      p);
 }
 
 void run_passes(IntermediateProgram p, bool opt) {
-  if (std::get_if<MachineProgram *>(&p)) {
-    for (auto &desc : asm_passes) {
+  if (std::get_if<MachineProgram*>(&p)) {
+    for (auto& desc : asm_passes) {
       run_pass(p, desc);
     }
-  } else if (std::get_if<IrProgram *>(&p)) {
-    for (auto &desc : ir_passes) {
+  } else if (std::get_if<IrProgram*>(&p)) {
+    for (auto& desc : ir_passes) {
       run_pass(p, desc);
     }
   }
@@ -109,11 +116,11 @@ void run_passes(IntermediateProgram p, bool opt) {
 
 void print_passes() {
   std::cout << "IR Passes:" << std::endl;
-  for (auto &[pass, name] : ir_passes) {
+  for (auto& [pass, name] : ir_passes) {
     std::cout << "* " << name << std::endl;
   }
   std::cout << "ASM Passes:" << std::endl;
-  for (auto &[pass, name] : asm_passes) {
+  for (auto& [pass, name] : asm_passes) {
     std::cout << "* " << name << std::endl;
   }
 }

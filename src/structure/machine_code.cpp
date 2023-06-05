@@ -3,7 +3,7 @@
 #include <functional>
 #include <iomanip>
 
-std::ostream &operator<<(std::ostream &os, const MachineProgram &p) {
+std::ostream& operator<<(std::ostream& os, const MachineProgram& p) {
   using std::endl;
   static const std::string BB_PREFIX = ".L_BB_";
   IndexMapper<MachineBB> bb_index;
@@ -20,7 +20,8 @@ std::ostream &operator<<(std::ostream &os, const MachineProgram &p) {
     if (insert_jump) {
       os << "\t"
          << "b"
-         << "\t" << after_sec_name << " @ forcibly insert constant pool" << endl;
+         << "\t" << after_sec_name << " @ forcibly insert constant pool"
+         << endl;
     }
     os << sec_name << ":" << endl;
     os << "\t"
@@ -33,20 +34,21 @@ std::ostream &operator<<(std::ostream &os, const MachineProgram &p) {
     if (int old_count = inst_count; inst_count > 1000) {
       // force insert a constant pool, slow but necessary
       auto sec_name = insert_pool(true);
-      auto force_pool =
-          "forcibly insert constant pool " + sec_name + ", instruction count: " + std::to_string(old_count);
+      auto force_pool = "forcibly insert constant pool " + sec_name +
+                        ", instruction count: " + std::to_string(old_count);
       dbg(force_pool);
     }
   };
 
   // print BB name
-  auto pb = [&](MachineBB *bb) {
+  auto pb = [&](MachineBB* bb) {
     os << BB_PREFIX << bb_index.get(bb);
     return "";
   };
 
   // emit stack movement code
-  auto move_stack = [&](bool enter, i32 offset, auto &&output, const std::string &prefix = "") {
+  auto move_stack = [&](bool enter, i32 offset, auto&& output,
+                        const std::string& prefix = "") {
     auto cmd = enter ? "sub" : "add";
     auto imm_operand = MachineOperand::I(offset);
     if (can_encode_imm(-offset)) {
@@ -67,15 +69,17 @@ std::ostream &operator<<(std::ostream &os, const MachineProgram &p) {
     }
   };
 
-  auto print_reg_list = [](std::ostream &os, MachineFunc *f) {
-    for (auto r = f->used_callee_saved_regs.cbegin(); r != f->used_callee_saved_regs.cend(); ++r) {
+  auto print_reg_list = [](std::ostream& os, MachineFunc* f) {
+    for (auto r = f->used_callee_saved_regs.cbegin();
+         r != f->used_callee_saved_regs.cend(); ++r) {
       if (r != f->used_callee_saved_regs.cbegin()) os << ", ";
       os << "r" << int(*r);
     }
   };
 
-  std::function<void(MachineInst *, MachineFunc *, MachineBB *, bool)> output_instruction =
-      [&](MachineInst *inst, MachineFunc *f, MachineBB *bb, bool indent) {
+  std::function<void(MachineInst*, MachineFunc*, MachineBB*, bool)>
+      output_instruction = [&](MachineInst* inst, MachineFunc* f, MachineBB* bb,
+                               bool indent) {
         if (bb && inst == bb->control_transfer_inst) {
           os << "@ control transfer" << endl;
         }
@@ -102,10 +106,11 @@ std::ostream &operator<<(std::ostream &os, const MachineProgram &p) {
           }
           if (x->offset.is_imm()) {
             i32 offset = x->offset.value << x->shift;
-            os << inst_name << x->cond << "\t" << data << ", [" << x->addr << ", #" << offset << "]" << endl;
+            os << inst_name << x->cond << "\t" << data << ", [" << x->addr
+               << ", #" << offset << "]" << endl;
           } else {
-            os << inst_name << x->cond << "\t" << data << ", [" << x->addr << ", " << x->offset << ", LSL #" << x->shift
-               << "]" << endl;
+            os << inst_name << x->cond << "\t" << data << ", [" << x->addr
+               << ", " << x->offset << ", LSL #" << x->shift << "]" << endl;
           }
           increase_count();
         } else if (auto x = dyn_cast<MIGlobal>(inst)) {
@@ -113,7 +118,7 @@ std::ostream &operator<<(std::ostream &os, const MachineProgram &p) {
              << "\t" << x->dst << ", =" << x->sym->name << endl;
           increase_count();
         } else if (auto x = dyn_cast<MIBinary>(inst)) {
-          const char *op = "unknown";
+          const char* op = "unknown";
           if (x->tag == MachineInst::Tag::Mul) {
             op = "mul";
           } else if (x->tag == MachineInst::Tag::Add) {
@@ -133,7 +138,8 @@ std::ostream &operator<<(std::ostream &os, const MachineProgram &p) {
           }
           os << op << "\t" << x->dst << ", " << x->lhs << ", " << x->rhs;
           if (x->shift.type != ArmShift::None) {
-            // assert(x->tag == MachineInst::Tag::Add && x->shift.type == ArmShift::Lsl);  // currently we only use this
+            // assert(x->tag == MachineInst::Tag::Add && x->shift.type ==
+            // ArmShift::Lsl);  // currently we only use this
             os << ", " << x->shift;
           }
           os << endl;
@@ -145,8 +151,8 @@ std::ostream &operator<<(std::ostream &os, const MachineProgram &p) {
           if (x->sign) {
             os << "sm";
           }
-          os << (x->add ? "mla" : "mls") << x->cond << "\t" << x->dst << ", " << x->lhs << ", " << x->rhs << ", "
-             << x->acc << endl;
+          os << (x->add ? "mla" : "mls") << x->cond << "\t" << x->dst << ", "
+             << x->lhs << ", " << x->rhs << ", " << x->acc << endl;
         } else if (auto x = dyn_cast<MICompare>(inst)) {
           os << "cmp"
              << "\t" << x->lhs << ", " << x->rhs << endl;
@@ -171,27 +177,31 @@ std::ostream &operator<<(std::ostream &os, const MachineProgram &p) {
             //            auto low_operand = MachineOperand::I((i32)low_bits);
             //            auto high_operand = MachineOperand::I((i32)high_bits);
             //            // debug output
-            //            auto move_split = "Immediate number " + to_string((i32)imm) + " in MIMove split to " +
-            //                              to_string(high_bits) + " and " + to_string(low_bits);
+            //            auto move_split = "Immediate number " +
+            //            to_string((i32)imm) + " in MIMove split to " +
+            //                              to_string(high_bits) + " and " +
+            //                              to_string(low_bits);
             //            dbg(move_split);
             //            // output asm
             //            os << "@ original imm: " << (i32)imm << endl;
             //            os << std::hex;
             //            os << "\t"
             //               << "movw"
-            //               << "\t" << x->dst << ", " << low_operand << " @ 0x" << low_bits << endl;
+            //               << "\t" << x->dst << ", " << low_operand << " @ 0x"
+            //               << low_bits << endl;
             //            increase_count();
             //            if (high_bits != 0) {
             //              os << "\t"
             //                 << "movt"
-            //                 << "\t" << x->dst << ", " << high_operand << " @ 0x" << high_bits << endl;
+            //                 << "\t" << x->dst << ", " << high_operand << " @
+            //                 0x" << high_bits << endl;
             //              increase_count();
             //            }
             //            os << std::dec;
           } else {
             os << "mov" << x->cond << "\t" << x->dst << ", " << x->rhs;
             if (x->shift.type != ArmShift::None) {
-              const char *op = "unknown";
+              const char* op = "unknown";
               if (x->shift.type == ArmShift::Lsl) {
                 op = "lsl";
               } else if (x->shift.type == ArmShift::Lsr) {
@@ -279,29 +289,29 @@ std::ostream &operator<<(std::ostream &os, const MachineProgram &p) {
     for (auto bb = f->bb.head; bb; bb = bb->next) {
       os << pb(bb) << ":" << endl;
       os << "@ pred:";
-      for (auto &pred : bb->pred) {
+      for (auto& pred : bb->pred) {
         os << " " << pb(pred);
       }
       os << ", succ:";
-      for (auto &succ : bb->succ) {
+      for (auto& succ : bb->succ) {
         if (succ) {
           os << " " << pb(succ);
         }
       }
       os << ", livein:";
-      for (auto &op : bb->livein) {
+      for (auto& op : bb->livein) {
         os << " " << op;
       }
       os << ", liveout:";
-      for (auto &op : bb->liveout) {
+      for (auto& op : bb->liveout) {
         os << " " << op;
       }
       os << ", liveuse:";
-      for (auto &use : bb->liveuse) {
+      for (auto& use : bb->liveuse) {
         os << " " << use;
       }
       os << ", def:";
-      for (auto &def : bb->def) {
+      for (auto& def : bb->def) {
         os << " " << def;
       }
       os << endl;
@@ -317,7 +327,7 @@ std::ostream &operator<<(std::ostream &os, const MachineProgram &p) {
   // data section
   os << endl << endl << ".section .data" << endl;
   os << ".align 4" << endl;
-  for (auto &decl : p.glob_decl) {
+  for (auto& decl : p.glob_decl) {
     os << endl << ".global " << decl->name << endl;
     os << "\t"
        << ".type"

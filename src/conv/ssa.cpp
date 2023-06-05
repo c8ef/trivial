@@ -4,14 +4,14 @@
 #include "../structure/ast.hpp"
 
 struct SsaContext {
-  IrProgram *program;
-  IrFunc *func;
-  BasicBlock *bb;
+  IrProgram* program;
+  IrFunc* func;
+  BasicBlock* bb;
   // bb stack for (continue, break)
-  std::vector<std::pair<BasicBlock *, BasicBlock *>> loop_stk;
+  std::vector<std::pair<BasicBlock*, BasicBlock*>> loop_stk;
 };
 
-Value *convert_expr(SsaContext *ctx, Expr *expr) {
+Value* convert_expr(SsaContext* ctx, Expr* expr) {
   if (auto x = dyn_cast<Binary>(expr)) {
     auto lhs = convert_expr(ctx, x->lhs);
     if (x->tag == Expr::Tag::Mod) {
@@ -27,10 +27,12 @@ Value *convert_expr(SsaContext *ctx, Expr *expr) {
       if (x->tag == Expr::And) {
         new BranchInst(lhs, rhs_bb, after_bb, ctx->bb);
       } else {
-        auto inv = new BinaryInst(Value::Tag::Eq, lhs, ConstValue::get(0), ctx->bb);
+        auto inv =
+            new BinaryInst(Value::Tag::Eq, lhs, ConstValue::get(0), ctx->bb);
         new BranchInst(inv, rhs_bb, after_bb, ctx->bb);
       }
-      // 这里需要pred的大小为2，真正维护pred在最后才做，可以保证是[当前bb, rhs的实际计算bb]的顺序
+      // 这里需要pred的大小为2，真正维护pred在最后才做，可以保证是[当前bb,
+      // rhs的实际计算bb]的顺序
       // 注意rhs的实际计算bb不一定就是rhs_bb，因为rhs也可能是&& ||
       after_bb->pred.resize(2);
       ctx->bb = rhs_bb;
@@ -52,9 +54,9 @@ Value *convert_expr(SsaContext *ctx, Expr *expr) {
     return ConstValue::get(x->val);
   } else if (auto x = dyn_cast<Index>(expr)) {
     // evalulate dims first
-    std::vector<Value *> dims;
+    std::vector<Value*> dims;
     dims.reserve(x->dims.size());
-    for (auto &p : x->dims) {
+    for (auto& p : x->dims) {
       auto value = convert_expr(ctx, p);
       dims.push_back(value);
     }
@@ -63,16 +65,20 @@ Value *convert_expr(SsaContext *ctx, Expr *expr) {
       // access to element
       if (x->dims.empty()) {
         // direct access
-        auto inst = new LoadInst(x->lhs_sym, x->lhs_sym->value, ConstValue::get(0), ctx->bb);
+        auto inst = new LoadInst(x->lhs_sym, x->lhs_sym->value,
+                                 ConstValue::get(0), ctx->bb);
         return inst;
       } else {
         // all levels except last level, emit GetElementPtr
-        Value *val = x->lhs_sym->value;
-        Inst *res = nullptr;
+        Value* val = x->lhs_sym->value;
+        Inst* res = nullptr;
         for (u32 i = 0; i < x->dims.size(); i++) {
-          int size = i + 1 < x->lhs_sym->dims.size() ? x->lhs_sym->dims[i + 1]->result : 1;
+          int size = i + 1 < x->lhs_sym->dims.size()
+                         ? x->lhs_sym->dims[i + 1]->result
+                         : 1;
           if (i + 1 < x->dims.size()) {
-            auto inst = new GetElementPtrInst(x->lhs_sym, val, dims[i], size, ctx->bb);
+            auto inst =
+                new GetElementPtrInst(x->lhs_sym, val, dims[i], size, ctx->bb);
             res = inst;
             val = inst;
           } else {
@@ -86,25 +92,29 @@ Value *convert_expr(SsaContext *ctx, Expr *expr) {
     } else if (x->dims.size()) {
       // access to sub array
       // emit GetElementPtr for each level
-      Value *val = x->lhs_sym->value;
-      Inst *res = nullptr;
+      Value* val = x->lhs_sym->value;
+      Inst* res = nullptr;
       for (u32 i = 0; i < x->dims.size(); i++) {
-        int size = i + 1 < x->lhs_sym->dims.size() ? x->lhs_sym->dims[i + 1]->result : 1;
-        auto inst = new GetElementPtrInst(x->lhs_sym, val, dims[i], size, ctx->bb);
+        int size = i + 1 < x->lhs_sym->dims.size()
+                       ? x->lhs_sym->dims[i + 1]->result
+                       : 1;
+        auto inst =
+            new GetElementPtrInst(x->lhs_sym, val, dims[i], size, ctx->bb);
         res = inst;
         val = inst;
       }
       return res;
     } else {
       // access to array itself
-      auto inst = new GetElementPtrInst(x->lhs_sym, x->lhs_sym->value, ConstValue::get(0), 0, ctx->bb);
+      auto inst = new GetElementPtrInst(x->lhs_sym, x->lhs_sym->value,
+                                        ConstValue::get(0), 0, ctx->bb);
       return inst;
     }
   } else if (auto x = dyn_cast<Call>(expr)) {
     // must evaluate args before calling
-    std::vector<Value *> args;
+    std::vector<Value*> args;
     args.reserve(x->args.size());
-    for (auto &p : x->args) {
+    for (auto& p : x->args) {
       auto value = convert_expr(ctx, p);
       args.push_back(value);
     }
@@ -113,7 +123,7 @@ Value *convert_expr(SsaContext *ctx, Expr *expr) {
 
     // args
     inst->args.reserve(x->args.size());
-    for (auto &value : args) {
+    for (auto& value : args) {
       inst->args.emplace_back(value, inst);
     }
     return inst;
@@ -121,9 +131,9 @@ Value *convert_expr(SsaContext *ctx, Expr *expr) {
   return nullptr;
 }
 
-void convert_stmt(SsaContext *ctx, Stmt *stmt) {
+void convert_stmt(SsaContext* ctx, Stmt* stmt) {
   if (auto x = dyn_cast<DeclStmt>(stmt)) {
-    for (auto &decl : x->decls) {
+    for (auto& decl : x->decls) {
       // local variables
       auto inst = new AllocaInst(&decl, ctx->bb);
       decl.value = inst;
@@ -138,7 +148,7 @@ void convert_stmt(SsaContext *ctx, Stmt *stmt) {
           // assign each element of flatten_init
           // heuristic: count how many elements are zero
           int num_zeros = 0;
-          std::vector<Value *> values;
+          std::vector<Value*> values;
           values.reserve(decl.flatten_init.size());
           for (u32 i = 0; i < decl.flatten_init.size(); i++) {
             auto init = convert_expr(ctx, decl.flatten_init[i]);
@@ -160,7 +170,8 @@ void convert_stmt(SsaContext *ctx, Stmt *stmt) {
             // ch
             call_inst->args.emplace_back(ConstValue::get(0), call_inst);
             // count = num * 4
-            call_inst->args.emplace_back(ConstValue::get(decl.dims[0]->result * 4), call_inst);
+            call_inst->args.emplace_back(
+                ConstValue::get(decl.dims[0]->result * 4), call_inst);
           }
 
           for (u32 i = 0; i < decl.flatten_init.size(); i++) {
@@ -178,9 +189,9 @@ void convert_stmt(SsaContext *ctx, Stmt *stmt) {
     }
   } else if (auto x = dyn_cast<Assign>(stmt)) {
     // evaluate dims first
-    std::vector<Value *> dims;
+    std::vector<Value*> dims;
     dims.reserve(x->dims.size());
-    for (auto &expr : x->dims) {
+    for (auto& expr : x->dims) {
       auto dim = convert_expr(ctx, expr);
       dims.push_back(dim);
     }
@@ -189,14 +200,18 @@ void convert_stmt(SsaContext *ctx, Stmt *stmt) {
     auto rhs = convert_expr(ctx, x->rhs);
 
     if (x->dims.empty()) {
-      new StoreInst(x->lhs_sym, x->lhs_sym->value, rhs, ConstValue::get(0), ctx->bb);
+      new StoreInst(x->lhs_sym, x->lhs_sym->value, rhs, ConstValue::get(0),
+                    ctx->bb);
     } else {
       // all levels except last level, emit GetElementPtr
       auto last = x->lhs_sym->value;
       for (u32 i = 0; i < x->dims.size(); i++) {
-        int size = i + 1 < x->lhs_sym->dims.size() ? x->lhs_sym->dims[i + 1]->result : 1;
+        int size = i + 1 < x->lhs_sym->dims.size()
+                       ? x->lhs_sym->dims[i + 1]->result
+                       : 1;
         if (i + 1 < x->dims.size()) {
-          auto inst = new GetElementPtrInst(x->lhs_sym, last, dims[i], size, ctx->bb);
+          auto inst =
+              new GetElementPtrInst(x->lhs_sym, last, dims[i], size, ctx->bb);
           last = inst;
         } else {
           new StoreInst(x->lhs_sym, last, rhs, dims[i], ctx->bb);
@@ -209,9 +224,9 @@ void convert_stmt(SsaContext *ctx, Stmt *stmt) {
     // 2. branch to `then` or `else`
     // 3. jump to `end` at the end of `then` and `else`
     auto cond = convert_expr(ctx, x->cond);
-    BasicBlock *bb_then = new BasicBlock;
-    BasicBlock *bb_else = new BasicBlock;
-    BasicBlock *bb_end = new BasicBlock;
+    BasicBlock* bb_then = new BasicBlock;
+    BasicBlock* bb_else = new BasicBlock;
+    BasicBlock* bb_end = new BasicBlock;
     ctx->func->bb.insertAtEnd(bb_then);
     ctx->func->bb.insertAtEnd(bb_else);
     ctx->func->bb.insertAtEnd(bb_end);
@@ -242,10 +257,10 @@ void convert_stmt(SsaContext *ctx, Stmt *stmt) {
     // loop: cond2
     // cond2 : loop or end
     // end
-    BasicBlock *bb_cond1 = new BasicBlock;
-    BasicBlock *bb_loop = new BasicBlock;
-    BasicBlock *bb_cond2 = new BasicBlock;
-    BasicBlock *bb_end = new BasicBlock;
+    BasicBlock* bb_cond1 = new BasicBlock;
+    BasicBlock* bb_loop = new BasicBlock;
+    BasicBlock* bb_cond2 = new BasicBlock;
+    BasicBlock* bb_end = new BasicBlock;
     ctx->func->bb.insertAtEnd(bb_cond1);
     ctx->func->bb.insertAtEnd(bb_loop);
 
@@ -276,7 +291,7 @@ void convert_stmt(SsaContext *ctx, Stmt *stmt) {
     ctx->func->bb.insertAtEnd(bb_end);
     ctx->bb = bb_end;
   } else if (auto x = dyn_cast<Block>(stmt)) {
-    for (auto &stmt : x->stmts) {
+    for (auto& stmt : x->stmts) {
       convert_stmt(ctx, stmt);
       if (isa<Continue>(stmt) || isa<Break>(stmt) || isa<Return>(stmt)) {
         break;
@@ -300,38 +315,39 @@ void convert_stmt(SsaContext *ctx, Stmt *stmt) {
   }
 }
 
-IrProgram *convert_ssa(Program &p) {
-  IrProgram *ret = new IrProgram;
-  for (Func &builtin : Func::BUILTIN) {
-    IrFunc *func = new IrFunc;
+IrProgram* convert_ssa(Program& p) {
+  IrProgram* ret = new IrProgram;
+  for (Func& builtin : Func::BUILTIN) {
+    IrFunc* func = new IrFunc;
     func->builtin = true;
     func->func = &builtin;
     builtin.val = func;
     ret->func.insertAtEnd(func);
   }
-  for (auto &g : p.glob) {
-    if (Func *f = std::get_if<0>(&g)) {
-      IrFunc *func = new IrFunc;
+  for (auto& g : p.glob) {
+    if (Func* f = std::get_if<0>(&g)) {
+      IrFunc* func = new IrFunc;
       func->builtin = false;
       func->func = f;
       f->val = func;
       ret->func.insertAtEnd(func);
     }
   }
-  for (auto &g : p.glob) {
-    if (Func *f = std::get_if<0>(&g)) {
-      IrFunc *func = f->val;
-      BasicBlock *entryBB = new BasicBlock;
+  for (auto& g : p.glob) {
+    if (Func* f = std::get_if<0>(&g)) {
+      IrFunc* func = f->val;
+      BasicBlock* entryBB = new BasicBlock;
       func->bb.insertAtEnd(entryBB);
 
       // setup params
-      for (auto &p : f->params) {
+      for (auto& p : f->params) {
         if (p.dims.empty()) {
           // alloca for each non-array param
           auto inst = new AllocaInst(&p, entryBB);
           p.value = inst;
           // then copy param into it
-          new StoreInst(&p, inst, new ParamRef(&p), ConstValue::get(0), entryBB);
+          new StoreInst(&p, inst, new ParamRef(&p), ConstValue::get(0),
+                        entryBB);
         } else {
           // there is no need to alloca for array param
           p.value = new ParamRef(&p);
@@ -339,7 +355,7 @@ IrProgram *convert_ssa(Program &p) {
       }
 
       SsaContext ctx = {ret, func, entryBB};
-      for (auto &stmt : f->body.stmts) {
+      for (auto& stmt : f->body.stmts) {
         convert_stmt(&ctx, stmt);
       }
 
@@ -352,16 +368,16 @@ IrProgram *convert_ssa(Program &p) {
         }
       }
 
-      for (BasicBlock *bb = func->bb.head; bb; bb = bb->next) {
+      for (BasicBlock* bb = func->bb.head; bb; bb = bb->next) {
         bb->pred.clear();
       }
-      for (BasicBlock *bb = func->bb.head; bb; bb = bb->next) {
-        for (BasicBlock *x : bb->succ()) {
+      for (BasicBlock* bb = func->bb.head; bb; bb = bb->next) {
+        for (BasicBlock* x : bb->succ()) {
           if (x) x->pred.push_back(bb);
         }
       }
     } else {
-      Decl *d = std::get_if<1>(&g);
+      Decl* d = std::get_if<1>(&g);
       ret->glob_decl.push_back(d);
       d->value = new GlobalRef(d);
     }

@@ -1,7 +1,2 @@
-cmake-build-debug
-.idea
-tmp
-build
+build/
 .vscode/
-coverage
-lcov.info

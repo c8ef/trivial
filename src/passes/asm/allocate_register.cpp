@@ -8,7 +8,8 @@
 
 #include "../ir/cfg.hpp"
 
-std::pair<std::vector<MachineOperand>, std::vector<MachineOperand>> get_def_use(MachineInst *inst) {
+std::pair<std::vector<MachineOperand>, std::vector<MachineOperand>> get_def_use(
+    MachineInst* inst) {
   std::vector<MachineOperand> def;
   std::vector<MachineOperand> use;
 
@@ -33,7 +34,9 @@ std::pair<std::vector<MachineOperand>, std::vector<MachineOperand>> get_def_use(
     use = {x->lhs, x->rhs};
   } else if (auto x = dyn_cast<MICall>(inst)) {
     // args (also caller save)
-    for (u32 i = (u32)ArmReg::r0; i < (u32)ArmReg::r0 + std::min(x->func->params.size(), (size_t)4); ++i) {
+    for (u32 i = (u32)ArmReg::r0;
+         i < (u32)ArmReg::r0 + std::min(x->func->params.size(), (size_t)4);
+         ++i) {
       use.push_back(MachineOperand::R((ArmReg)i));
     }
     for (u32 i = (u32)ArmReg::r0; i <= (u32)ArmReg::r3; i++) {
@@ -49,9 +52,10 @@ std::pair<std::vector<MachineOperand>, std::vector<MachineOperand>> get_def_use(
   }
   return {def, use};
 }
-std::pair<MachineOperand *, std::vector<MachineOperand *>> get_def_use_ptr(MachineInst *inst) {
-  MachineOperand *def = nullptr;
-  std::vector<MachineOperand *> use;
+std::pair<MachineOperand*, std::vector<MachineOperand*>> get_def_use_ptr(
+    MachineInst* inst) {
+  MachineOperand* def = nullptr;
+  std::vector<MachineOperand*> use;
 
   if (auto x = dyn_cast<MIBinary>(inst)) {
     def = &x->dst;
@@ -79,7 +83,7 @@ std::pair<MachineOperand *, std::vector<MachineOperand *>> get_def_use_ptr(Machi
   }
   return {def, use};
 }
-void liveness_analysis(MachineFunc *f) {
+void liveness_analysis(MachineFunc* f) {
   // calculate LiveUse and Def sets for each bb
   // each elements is a virtual register or precolored register
   for (auto bb = f->bb.head; bb; bb = bb->next) {
@@ -89,13 +93,13 @@ void liveness_analysis(MachineFunc *f) {
       auto [def, use] = get_def_use(inst);
 
       // liveuse
-      for (auto &u : use) {
+      for (auto& u : use) {
         if (u.needs_color() && bb->def.find(u) == bb->def.end()) {
           bb->liveuse.insert(u);
         }
       }
       // def
-      for (auto &d : def) {
+      for (auto& d : def) {
         if (d.needs_color() && bb->liveuse.find(d) == bb->liveuse.end()) {
           bb->def.insert(d);
         }
@@ -112,7 +116,7 @@ void liveness_analysis(MachineFunc *f) {
     changed = false;
     for (auto bb = f->bb.head; bb; bb = bb->next) {
       std::set<MachineOperand> new_out;
-      for (auto &succ : bb->succ) {
+      for (auto& succ : bb->succ) {
         if (succ) {
           new_out.insert(succ->livein.begin(), succ->livein.end());
         }
@@ -122,7 +126,7 @@ void liveness_analysis(MachineFunc *f) {
         changed = true;
         bb->liveout = new_out;
         std::set<MachineOperand> new_in = bb->liveuse;
-        for (auto &e : bb->liveout) {
+        for (auto& e : bb->liveout) {
           if (bb->def.find(e) == bb->def.end()) {
             new_in.insert(e);
           }
@@ -135,7 +139,7 @@ void liveness_analysis(MachineFunc *f) {
 }
 
 // iterated register coalescing
-void allocate_register(MachineProgram *p) {
+void allocate_register(MachineProgram* p) {
   for (auto f = p->func.head; f; f = f->next) {
     auto loop_info = compute_loop_info(f->func);
     dbg(f->func->func->name);
@@ -152,7 +156,7 @@ void allocate_register(MachineProgram *p) {
       // other variables in the paper
       std::map<MachineOperand, u32> degree;
       std::map<MachineOperand, MachineOperand> alias;
-      std::map<MachineOperand, std::set<MIMove *, MIMoveCompare>> move_list;
+      std::map<MachineOperand, std::set<MIMove*, MIMoveCompare>> move_list;
       std::set<MachineOperand> simplify_worklist;
       std::set<MachineOperand> freeze_worklist;
       std::set<MachineOperand> spill_worklist;
@@ -160,11 +164,11 @@ void allocate_register(MachineProgram *p) {
       std::set<MachineOperand> coalesced_nodes;
       std::vector<MachineOperand> colored_nodes;
       std::vector<MachineOperand> select_stack;
-      std::set<MIMove *, MIMoveCompare> coalesced_moves;
-      std::set<MIMove *, MIMoveCompare> constrained_moves;
-      std::set<MIMove *, MIMoveCompare> frozen_moves;
-      std::set<MIMove *, MIMoveCompare> worklist_moves;
-      std::set<MIMove *, MIMoveCompare> active_moves;
+      std::set<MIMove*, MIMoveCompare> coalesced_moves;
+      std::set<MIMove*, MIMoveCompare> constrained_moves;
+      std::set<MIMove*, MIMoveCompare> frozen_moves;
+      std::set<MIMove*, MIMoveCompare> worklist_moves;
+      std::set<MIMove*, MIMoveCompare> active_moves;
       // for heuristic
       std::map<MachineOperand, u32> loop_cnt;
 
@@ -206,7 +210,8 @@ void allocate_register(MachineProgram *p) {
           for (auto inst = bb->insts.tail; inst; inst = inst->prev) {
             auto [def, use] = get_def_use(inst);
             if (auto x = dyn_cast<MIMove>(inst)) {
-              if (x->dst.needs_color() && x->rhs.needs_color() && x->is_simple()) {
+              if (x->dst.needs_color() && x->rhs.needs_color() &&
+                  x->is_simple()) {
                 live.erase(x->rhs);
                 move_list[x->rhs].insert(x);
                 move_list[x->dst].insert(x);
@@ -214,28 +219,28 @@ void allocate_register(MachineProgram *p) {
               }
             }
 
-            for (auto &d : def) {
+            for (auto& d : def) {
               if (d.needs_color()) {
                 live.insert(d);
               }
             }
 
-            for (auto &d : def) {
+            for (auto& d : def) {
               if (d.needs_color()) {
-                for (auto &l : live) {
+                for (auto& l : live) {
                   add_edge(l, d);
                 }
               }
             }
 
-            for (auto &d : def) {
+            for (auto& d : def) {
               if (d.needs_color()) {
                 live.erase(d);
                 loop_cnt[d] += loop_info.depth_of(bb->bb);
               }
             }
 
-            for (auto &u : use) {
+            for (auto& u : use) {
               if (u.needs_color()) {
                 live.insert(u);
                 loop_cnt[u] += loop_info.depth_of(bb->bb);
@@ -248,8 +253,10 @@ void allocate_register(MachineProgram *p) {
       auto adjacent = [&](MachineOperand n) {
         std::set<MachineOperand> res = adj_list[n];
         for (auto it = res.begin(); it != res.end();) {
-          if (std::find(select_stack.begin(), select_stack.end(), *it) == select_stack.end() &&
-              std::find(coalesced_nodes.begin(), coalesced_nodes.end(), *it) == coalesced_nodes.end()) {
+          if (std::find(select_stack.begin(), select_stack.end(), *it) ==
+                  select_stack.end() &&
+              std::find(coalesced_nodes.begin(), coalesced_nodes.end(), *it) ==
+                  coalesced_nodes.end()) {
             it++;
           } else {
             it = res.erase(it);
@@ -259,9 +266,10 @@ void allocate_register(MachineProgram *p) {
       };
 
       auto node_moves = [&](MachineOperand n) {
-        std::set<MIMove *, MIMoveCompare> res = move_list[n];
+        std::set<MIMove*, MIMoveCompare> res = move_list[n];
         for (auto it = res.begin(); it != res.end();) {
-          if (active_moves.find(*it) == active_moves.end() && worklist_moves.find(*it) == worklist_moves.end()) {
+          if (active_moves.find(*it) == active_moves.end() &&
+              worklist_moves.find(*it) == worklist_moves.end()) {
             it = res.erase(it);
           } else {
             it++;
@@ -270,7 +278,9 @@ void allocate_register(MachineProgram *p) {
         return res;
       };
 
-      auto move_related = [&](MachineOperand n) { return !node_moves(n).empty(); };
+      auto move_related = [&](MachineOperand n) {
+        return !node_moves(n).empty();
+      };
 
       auto mk_worklist = [&]() {
         for (u32 i = 0; i < f->virtual_max; i++) {
@@ -324,14 +334,15 @@ void allocate_register(MachineProgram *p) {
         auto n = *it;
         simplify_worklist.erase(it);
         select_stack.push_back(n);
-        for (auto &m : adjacent(n)) {
+        for (auto& m : adjacent(n)) {
           decrement_degree(m);
         }
       };
 
       // procedure GetAlias(n)
       auto get_alias = [&](MachineOperand n) -> MachineOperand {
-        while (std::find(coalesced_nodes.begin(), coalesced_nodes.end(), n) != coalesced_nodes.end()) {
+        while (std::find(coalesced_nodes.begin(), coalesced_nodes.end(), n) !=
+               coalesced_nodes.end()) {
           n = alias[n];
         }
         return n;
@@ -346,7 +357,8 @@ void allocate_register(MachineProgram *p) {
       };
 
       auto ok = [&](MachineOperand t, MachineOperand r) {
-        return degree[t] < k || t.is_precolored() || adj_set.find({t, r}) != adj_set.end();
+        return degree[t] < k || t.is_precolored() ||
+               adj_set.find({t, r}) != adj_set.end();
       };
 
       auto adj_ok = [&](MachineOperand v, MachineOperand u) {
@@ -370,7 +382,7 @@ void allocate_register(MachineProgram *p) {
         coalesced_nodes.insert(v);
         alias[v] = u;
         // NOTE: nodeMoves should be moveList
-        auto &m = move_list[u];
+        auto& m = move_list[u];
         for (auto n : move_list[v]) {
           m.insert(n);
         }
@@ -379,13 +391,15 @@ void allocate_register(MachineProgram *p) {
           decrement_degree(t);
         }
 
-        if (degree[u] >= k && freeze_worklist.find(u) != freeze_worklist.end()) {
+        if (degree[u] >= k &&
+            freeze_worklist.find(u) != freeze_worklist.end()) {
           freeze_worklist.erase(u);
           spill_worklist.insert(u);
         }
       };
 
-      auto conservative = [&](std::set<MachineOperand> adj_u, std::set<MachineOperand> adj_v) {
+      auto conservative = [&](std::set<MachineOperand> adj_u,
+                              std::set<MachineOperand> adj_v) {
         u32 count = 0;
         // set union
         for (auto n : adj_v) {
@@ -421,7 +435,8 @@ void allocate_register(MachineProgram *p) {
           add_work_list(u);
           add_work_list(v);
         } else if ((u.is_precolored() && adj_ok(v, u)) ||
-                   (!u.is_precolored() && conservative(adjacent(u), adjacent(v)))) {
+                   (!u.is_precolored() &&
+                    conservative(adjacent(u), adjacent(v)))) {
           coalesced_moves.insert(m);
           combine(u, v);
           add_work_list(u);
@@ -459,9 +474,11 @@ void allocate_register(MachineProgram *p) {
       auto select_spill = [&]() {
         MachineOperand m{};
         // select node with max degree (heuristic)
-        m = *std::max_element(spill_worklist.begin(), spill_worklist.end(), [&](auto a, auto b) {
-          return float(degree[a]) / pow(2, loop_cnt[a]) < float(degree[b]) / pow(2, loop_cnt[b]);
-        });
+        m = *std::max_element(spill_worklist.begin(), spill_worklist.end(),
+                              [&](auto a, auto b) {
+                                return float(degree[a]) / pow(2, loop_cnt[a]) <
+                                       float(degree[b]) / pow(2, loop_cnt[b]);
+                              });
         simplify_worklist.insert(m);
         freeze_moves(m);
         spill_worklist.erase(m);
@@ -482,7 +499,8 @@ void allocate_register(MachineProgram *p) {
 
           for (auto w : adj_list[n]) {
             auto a = get_alias(w);
-            if (a.state == MachineOperand::State::Allocated || a.is_precolored()) {
+            if (a.state == MachineOperand::State::Allocated ||
+                a.is_precolored()) {
               ok_colors.erase(a.value);
             } else if (a.state == MachineOperand::State::Virtual) {
               auto it = colored.find(a);
@@ -496,7 +514,8 @@ void allocate_register(MachineProgram *p) {
             spilled_nodes.insert(n);
           } else {
             auto color = *ok_colors.begin();
-            colored[n] = MachineOperand{MachineOperand::State::Allocated, color};
+            colored[n] =
+                MachineOperand{MachineOperand::State::Allocated, color};
           }
         }
 
@@ -515,7 +534,7 @@ void allocate_register(MachineProgram *p) {
         }
 
         if (debug_mode) {
-          for (auto &[before, after] : colored) {
+          for (auto& [before, after] : colored) {
             auto colored = std::string(before) + " => " + std::string(after);
             dbg(colored);
           }
@@ -529,7 +548,7 @@ void allocate_register(MachineProgram *p) {
               *def = colored[*def];
             }
 
-            for (auto &u : use) {
+            for (auto& u : use) {
               if (u && colored.find(*u) != colored.end()) {
                 *u = colored[*u];
               }
@@ -553,21 +572,22 @@ void allocate_register(MachineProgram *p) {
         if (!spill_worklist.empty()) {
           select_spill();
         }
-      } while (!simplify_worklist.empty() || !worklist_moves.empty() || !freeze_worklist.empty() ||
-               !spill_worklist.empty());
+      } while (!simplify_worklist.empty() || !worklist_moves.empty() ||
+               !freeze_worklist.empty() || !spill_worklist.empty());
       assign_colors();
       if (spilled_nodes.empty()) {
         done = true;
       } else {
-        for (auto &n : spilled_nodes) {
-          auto spill = "Spilling v" + std::to_string(n.value) + " with loop count of " + std::to_string(loop_cnt[n]);
+        for (auto& n : spilled_nodes) {
+          auto spill = "Spilling v" + std::to_string(n.value) +
+                       " with loop count of " + std::to_string(loop_cnt[n]);
           dbg(spill);
           // allocate on stack
           for (auto bb = f->bb.head; bb; bb = bb->next) {
             auto offset = f->stack_size;
             auto offset_imm = MachineOperand::I(offset);
 
-            auto generate_access_offset = [&](MIAccess *access_inst) {
+            auto generate_access_offset = [&](MIAccess* access_inst) {
               if (offset < (1u << 12u)) {  // ldr / str has only imm12
                 access_inst->offset = offset_imm;
               } else {
@@ -579,8 +599,8 @@ void allocate_register(MachineProgram *p) {
             };
 
             // generate a MILoad before first use, and a MIStore after last def
-            MachineInst *first_use = nullptr;
-            MachineInst *last_def = nullptr;
+            MachineInst* first_use = nullptr;
+            MachineInst* last_def = nullptr;
             i32 vreg = -1;
             auto checkpoint = [&]() {
               if (first_use) {
@@ -607,7 +627,8 @@ void allocate_register(MachineProgram *p) {
             };
 
             int i = 0;
-            for (auto orig_inst = bb->insts.head; orig_inst; orig_inst = orig_inst->next) {
+            for (auto orig_inst = bb->insts.head; orig_inst;
+                 orig_inst = orig_inst->next) {
               auto [def, use] = get_def_use_ptr(orig_inst);
               if (def && *def == n) {
                 // store
@@ -618,7 +639,7 @@ void allocate_register(MachineProgram *p) {
                 last_def = orig_inst;
               }
 
-              for (auto &u : use) {
+              for (auto& u : use) {
                 if (*u == n) {
                   // load
                   if (vreg == -1) {

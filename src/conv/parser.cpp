@@ -75,7 +75,7 @@ Program Parser::ParseProgram() {
       program.glob.emplace_back(func);
     } else {
       std::vector<Decl> decls = ParseDecl(is_const, id);
-      for (Decl &decl : decls) {
+      for (Decl& decl : decls) {
         decl.is_glob = true;
         program.glob.emplace_back(decl);
       }
@@ -104,15 +104,15 @@ Func Parser::ParseFunction(Keyword ret_type, std::string id) {
     assert(false);
   }
 
-  Stmt *block = ParseBlock();
+  Stmt* block = ParseBlock();
   if (!block) {
     assert(false);
   }
 
   if (ret_type == Keyword::Int) {
-    return Func{true, id, params, *((Block *)block)};
+    return Func{true, id, params, *((Block*)block)};
   } else {
-    return Func{false, id, params, *((Block *)block)};
+    return Func{false, id, params, *((Block*)block)};
   }
 }
 
@@ -129,7 +129,7 @@ Decl Parser::ParseParam() {
   std::string id = lexer_.id_val();
   NextToken();
 
-  std::vector<Expr *> dims;
+  std::vector<Expr*> dims;
   if (IsTokenChar('[')) {
     dims = ParseArrayDims0();
     return Decl{false, false, false, id, dims, nullptr};
@@ -163,7 +163,8 @@ std::vector<Decl> Parser::ParseDecl(bool is_const, std::string first_id) {
     if (IsTokenOperator(Operator::Assign)) {
       NextToken();
       auto latter_init_list = ParseInitList();
-      decls.push_back(Decl{false, false, true, id, latter_dims, latter_init_list});
+      decls.push_back(
+          Decl{false, false, true, id, latter_dims, latter_init_list});
     } else {
       decls.push_back(Decl{false, false, false, id, latter_dims, {}});
     }
@@ -173,7 +174,7 @@ std::vector<Decl> Parser::ParseDecl(bool is_const, std::string first_id) {
     assert(false);
   }
   if (is_const) {
-    for (Decl &decl : decls) {
+    for (Decl& decl : decls) {
       decl.is_const = true;
     }
   }
@@ -203,7 +204,7 @@ InitList Parser::ParseInitList() {
   return InitList{nullptr, lists};
 }
 
-Stmt *Parser::ParseStmt() {
+Stmt* Parser::ParseStmt() {
   if (IsTokenChar('{')) {
     return ParseBlock();
   }
@@ -232,7 +233,7 @@ Stmt *Parser::ParseStmt() {
         return &Continue::INSTANCE;
       case Keyword::Return: {
         NextToken();
-        Expr *expr = nullptr;
+        Expr* expr = nullptr;
         if (!IsTokenChar(';')) {
           expr = ParseExpr();
           if (!expr) {
@@ -282,23 +283,24 @@ Stmt *Parser::ParseStmt() {
   return ParseBare();
 }
 
-Stmt *Parser::ParseEmptyStmt() {
+Stmt* Parser::ParseEmptyStmt() {
   NextToken();
   return new ExprStmt{Stmt::ExprStmt, nullptr};
 }
 
-Stmt *Parser::ParseBare() {
-  auto *expr = ParseExpr();
+Stmt* Parser::ParseBare() {
+  auto* expr = ParseExpr();
   if (expr->tag == Expr::Index && IsTokenOperator(Operator::Assign)) {
     NextToken();
-    auto *rhs = ParseExpr();
+    auto* rhs = ParseExpr();
     if (!rhs) {
       return nullptr;
     }
     if (!ExpectChar(';')) {
       return nullptr;
     }
-    return new Assign{Stmt::Assign, ((Index *)expr)->name, ((Index *)expr)->dims, rhs};
+    return new Assign{Stmt::Assign, ((Index*)expr)->name, ((Index*)expr)->dims,
+                      rhs};
   }
   if (!expr) {
     return nullptr;
@@ -309,14 +311,14 @@ Stmt *Parser::ParseBare() {
   return new ExprStmt{Stmt::ExprStmt, expr};
 }
 
-Stmt *Parser::ParseBlock() {
+Stmt* Parser::ParseBlock() {
   if (!ExpectChar('{')) {
     return nullptr;
   }
 
-  std::vector<Stmt *> stmts;
+  std::vector<Stmt*> stmts;
   while (!IsTokenChar('}')) {
-    auto *stmt = ParseStmt();
+    auto* stmt = ParseStmt();
     if (!stmt) {
       return nullptr;
     }
@@ -327,7 +329,7 @@ Stmt *Parser::ParseBlock() {
   return new Block{Stmt::Block, stmts};
 }
 
-Stmt *Parser::ParseIfElse() {
+Stmt* Parser::ParseIfElse() {
   NextToken();
 
   if (!ExpectChar('(')) return nullptr;
@@ -337,7 +339,7 @@ Stmt *Parser::ParseIfElse() {
   auto then = ParseStmt();
   if (!then) return nullptr;
 
-  Stmt *else_then = nullptr;
+  Stmt* else_then = nullptr;
   if (IsTokenKeyword(Keyword::Else)) {
     NextToken();
     else_then = ParseStmt();
@@ -346,7 +348,7 @@ Stmt *Parser::ParseIfElse() {
   return new If{Stmt::If, cond, then, else_then};
 }
 
-Stmt *Parser::ParseWhile() {
+Stmt* Parser::ParseWhile() {
   NextToken();
 
   if (!ExpectChar('(')) return nullptr;
@@ -359,11 +361,11 @@ Stmt *Parser::ParseWhile() {
   return new While{Stmt::While, cond, body};
 }
 
-Expr *Parser::ParseExpr() {
-  std::stack<Expr *> oprs;
+Expr* Parser::ParseExpr() {
+  std::stack<Expr*> oprs;
   std::stack<Operator> ops;
 
-  auto *expr = ParseUnary();
+  auto* expr = ParseUnary();
   if (expr == nullptr) {
     return nullptr;
   }
@@ -403,7 +405,7 @@ Expr *Parser::ParseExpr() {
   return oprs.top();
 }
 
-Expr *Parser::ParseUnary() {
+Expr* Parser::ParseUnary() {
   if (cur_token_ == Token::Operator) {
     switch (lexer_.op_val()) {
       case Operator::Add:
@@ -423,8 +425,8 @@ Expr *Parser::ParseUnary() {
   return ParseFactor();
 }
 
-Expr *Parser::ParseFactor() {
-  Expr *expr = nullptr;
+Expr* Parser::ParseFactor() {
+  Expr* expr = nullptr;
   if (IsTokenChar('(')) {
     NextToken();
     expr = ParseExpr();
@@ -451,8 +453,8 @@ Expr *Parser::ParseFactor() {
   return ParseIntConst();
 }
 
-Expr *Parser::ParseIntConst() {
-  Expr *expr = nullptr;
+Expr* Parser::ParseIntConst() {
+  Expr* expr = nullptr;
   if (cur_token_ == Token::Int) {
     expr = new IntConst{Expr::IntConst, 0, static_cast<i32>(lexer_.int_val())};
 
@@ -463,13 +465,13 @@ Expr *Parser::ParseIntConst() {
   assert(false);
 }
 
-std::vector<Expr *> Parser::ParseExprList() {
+std::vector<Expr*> Parser::ParseExprList() {
   NextToken();
-  std::vector<Expr *> args;
+  std::vector<Expr*> args;
 
   if (!IsTokenChar(')')) {
     for (;;) {
-      auto *arg = ParseExpr();
+      auto* arg = ParseExpr();
       if (arg == nullptr) {
         return {};
       }
@@ -488,13 +490,13 @@ std::vector<Expr *> Parser::ParseExprList() {
   return args;
 }
 
-std::vector<Expr *> Parser::ParseArrayDims() {
-  std::vector<Expr *> dims;
+std::vector<Expr*> Parser::ParseArrayDims() {
+  std::vector<Expr*> dims;
 
   while (IsTokenChar('[')) {
     NextToken();
 
-    auto *dim = ParseExpr();
+    auto* dim = ParseExpr();
     if (dim == nullptr) {
       return {};
     }
@@ -509,17 +511,17 @@ std::vector<Expr *> Parser::ParseArrayDims() {
   return dims;
 }
 
-std::vector<Expr *> Parser::ParseArrayDims0() {
+std::vector<Expr*> Parser::ParseArrayDims0() {
   NextToken();
   if (!ExpectChar(']')) {
     assert(false);
   }
 
-  std::vector<Expr *> dims{nullptr};
+  std::vector<Expr*> dims{nullptr};
   while (IsTokenChar('[')) {
     NextToken();
 
-    auto *dim = ParseExpr();
+    auto* dim = ParseExpr();
     if (dim == nullptr) {
       return {};
     }

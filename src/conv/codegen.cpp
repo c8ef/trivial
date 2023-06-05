@@ -9,9 +9,9 @@
 using ParMv = std::vector<std::pair<MachineOperand, MachineOperand>>;
 using u64 = uint64_t;
 
-static inline void insert_parallel_mv(ParMv &movs, MachineInst *insertBefore) {
+static inline void insert_parallel_mv(ParMv& movs, MachineInst* insertBefore) {
   // serialization in any order is okay
-  for (auto &[lhs, rhs] : movs) {
+  for (auto& [lhs, rhs] : movs) {
     auto inst = new MIMove(insertBefore);
     inst->dst = lhs;
     inst->rhs = rhs;
@@ -19,19 +19,24 @@ static inline void insert_parallel_mv(ParMv &movs, MachineInst *insertBefore) {
 }
 
 // resolve imm as instruction operand
-// ARM has limitations, see https://stackoverflow.com/questions/10261300/invalid-constant-after-fixup
-static MachineOperand generate_imm_operand(i32 imm, MachineBB *mbb, bool force_reg, int &current_virtual_max) {
+// ARM has limitations, see
+// https://stackoverflow.com/questions/10261300/invalid-constant-after-fixup
+static MachineOperand generate_imm_operand(i32 imm, MachineBB* mbb,
+                                           bool force_reg,
+                                           int& current_virtual_max) {
   auto operand = MachineOperand::I(imm);
   if (!force_reg && can_encode_imm(imm)) {
     // directly encoded in instruction as imm
     return operand;
   } else {
-    auto imm_split = "Immediate number " + std::to_string(imm) + " cannot be encoded, converting to MIMove";
+    auto imm_split = "Immediate number " + std::to_string(imm) +
+                     " cannot be encoded, converting to MIMove";
     dbg(imm_split);
     // use MIMove, which automatically splits if necessary
     auto vreg = MachineOperand::V(current_virtual_max++);
     if (mbb->control_transfer_inst) {
-      // insert before control transfer when there is control transfer instruction
+      // insert before control transfer when there is control transfer
+      // instruction
       auto mv_inst = new MIMove(mbb->control_transfer_inst);
       mv_inst->dst = vreg;
       mv_inst->rhs = operand;
@@ -45,7 +50,7 @@ static MachineOperand generate_imm_operand(i32 imm, MachineBB *mbb, bool force_r
   }
 }
 
-MachineProgram *machine_code_generation(IrProgram *p) {
+MachineProgram* machine_code_generation(IrProgram* p) {
   auto ret = new MachineProgram;
   ret->glob_decl = p->glob_decl;
   for (auto f = p->func.head; f; f = f->next) {
@@ -55,7 +60,7 @@ MachineProgram *machine_code_generation(IrProgram *p) {
     mf->func = f;
 
     // 1. create machine bb 1-to-1
-    std::map<BasicBlock *, MachineBB *> bb_map;
+    std::map<BasicBlock*, MachineBB*> bb_map;
     for (auto bb = f->bb.head; bb; bb = bb->next) {
       auto mbb = new MachineBB;
       mbb->bb = bb;
@@ -75,26 +80,28 @@ MachineProgram *machine_code_generation(IrProgram *p) {
           mbb->succ[i] = nullptr;
         }
       }
-      for (auto &pred : bb->pred) {
+      for (auto& pred : bb->pred) {
         mbb->pred.push_back(bb_map[pred]);
       }
     }
 
     // map value to MachineOperand
-    std::map<Value *, MachineOperand> val_map;
+    std::map<Value*, MachineOperand> val_map;
     // map global decl to MachineOperand
-    std::map<Decl *, MachineOperand> glob_map;
+    std::map<Decl*, MachineOperand> glob_map;
     // map param decl to MachineOperand
-    std::map<Decl *, MachineOperand> param_map;
+    std::map<Decl*, MachineOperand> param_map;
 
     // virtual registers
     i32 virtual_max = 0;
     auto new_virtual_reg = [&]() { return MachineOperand::V(virtual_max++); };
 
-    auto get_imm_operand = [&](i32 imm, MachineBB *mbb) { return generate_imm_operand(imm, mbb, false, virtual_max); };
+    auto get_imm_operand = [&](i32 imm, MachineBB* mbb) {
+      return generate_imm_operand(imm, mbb, false, virtual_max);
+    };
 
     // resolve value reference
-    auto resolve = [&](Value *value, MachineBB *mbb) {
+    auto resolve = [&](Value* value, MachineBB* mbb) {
       if (auto x = dyn_cast<ParamRef>(value)) {
         auto it = param_map.find(x->decl);
         if (it == param_map.end()) {
@@ -135,7 +142,7 @@ MachineProgram *machine_code_generation(IrProgram *p) {
         auto it = glob_map.find(x->decl);
         if (it == glob_map.end()) {
           // load global addr in entry bb
-//          if (glo)
+          //          if (glo)
           auto new_inst = new MIGlobal(x->decl, mf->bb.head);
           // allocate virtual reg
           auto res = new_virtual_reg();
@@ -161,7 +168,7 @@ MachineProgram *machine_code_generation(IrProgram *p) {
       }
     };
 
-    auto resolve_no_imm = [&](Value *value, MachineBB *mbb) {
+    auto resolve_no_imm = [&](Value* value, MachineBB* mbb) {
       if (auto y = dyn_cast<ConstValue>(value)) {
         // can't store an immediate directly
         auto res = new_virtual_reg();
@@ -175,7 +182,7 @@ MachineProgram *machine_code_generation(IrProgram *p) {
       }
     };
 
-    std::map<Value *, std::pair<MachineInst *, ArmCond>> cond_map;
+    std::map<Value*, std::pair<MachineInst*, ArmCond>> cond_map;
 
     // 2. translate instructions except phi
     for (auto bb = f->bb.head; bb; bb = bb->next) {
@@ -208,7 +215,8 @@ MachineProgram *machine_code_generation(IrProgram *p) {
           auto mult = x->multiplier * 4;
           auto y = dyn_cast<ConstValue>(x->index.value);
 
-          new MIComment("begin getelementptr " + std::string(x->lhs_sym->name), mbb);
+          new MIComment("begin getelementptr " + std::string(x->lhs_sym->name),
+                        mbb);
           if (mult == 0 || (y && y->imm == 0)) {
             // dst <- arr
             auto move_inst = new MIMove(mbb);
@@ -223,7 +231,8 @@ MachineProgram *machine_code_generation(IrProgram *p) {
             add_inst->dst = dst;
             add_inst->lhs = arr;
             add_inst->rhs = imm_operand;
-            auto offset_const = "offset calculated to constant " + std::to_string(off) + " in getelementptr";
+            auto offset_const = "offset calculated to constant " +
+                                std::to_string(off) + " in getelementptr";
             dbg(offset_const);
           } else if ((mult & (mult - 1)) == 0) {
             // dst <- arr + index << log(mult)
@@ -234,7 +243,9 @@ MachineProgram *machine_code_generation(IrProgram *p) {
             add_inst->rhs = index;
             add_inst->shift.type = ArmShift::Lsl;
             add_inst->shift.shift = __builtin_ctz(mult);
-            auto fuse_mul_add = "MUL " + std::to_string(mult) + " and ADD fused into shifted ADD in getelementptr";
+            auto fuse_mul_add =
+                "MUL " + std::to_string(mult) +
+                " and ADD fused into shifted ADD in getelementptr";
             dbg(fuse_mul_add);
           } else {
             // dst <- arr
@@ -271,8 +282,9 @@ MachineProgram *machine_code_generation(IrProgram *p) {
         } else if (auto x = dyn_cast<BinaryInst>(inst)) {
           MachineOperand rhs{};
           auto rhs_const = x->rhs.value->tag == Value::Tag::Const;
-          auto imm = static_cast<ConstValue *>(x->rhs.value)->imm;
-          assert(!(x->lhs.value->tag == Value::Tag::Const && rhs_const));  // should be optimized out
+          auto imm = static_cast<ConstValue*>(x->rhs.value)->imm;
+          assert(!(x->lhs.value->tag == Value::Tag::Const &&
+                   rhs_const));  // should be optimized out
 
           auto lhs = resolve_no_imm(x->lhs.value, mbb);
           // Optimization 2:
@@ -280,7 +292,7 @@ MachineProgram *machine_code_generation(IrProgram *p) {
           if (rhs_const) {
             if (x->tag == Value::Tag::Div && imm > 0) {
               auto dst = resolve(inst, mbb);
-              u32 d = static_cast<ConstValue *>(x->rhs.value)->imm;
+              u32 d = static_cast<ConstValue*>(x->rhs.value)->imm;
               u32 s = __builtin_ctz(d);
               if (d == (u32(1) << s)) {  // d是2的幂次，转化成移位
                 if (false) {
@@ -370,12 +382,15 @@ MachineProgram *machine_code_generation(IrProgram *p) {
             // try to use negative imm to reduce instructions
             if (x->tag == Value::Tag::Add || x->tag == Value::Tag::Sub) {
               // add r0, #-40 == sub r0, #40
-              // the former will be splitted into instructions (movw, movt, add), the latter is only one
+              // the former will be splitted into instructions (movw, movt,
+              // add), the latter is only one
               if (!can_encode_imm(imm) && can_encode_imm(-imm)) {
-                auto negative_imm = "Imm " + std::to_string(imm) + " can be encoded in negative form";
+                auto negative_imm = "Imm " + std::to_string(imm) +
+                                    " can be encoded in negative form";
                 dbg(negative_imm);
                 imm = -imm;
-                x->tag = x->tag == Value::Tag::Add ? Value::Tag::Sub : Value::Tag::Add;
+                x->tag = x->tag == Value::Tag::Add ? Value::Tag::Sub
+                                                   : Value::Tag::Add;
               }
             }
             rhs = get_imm_operand(imm, mbb);  // might be imm or register
@@ -384,7 +399,8 @@ MachineProgram *machine_code_generation(IrProgram *p) {
           }
           // Optimization 3:
           // Fused Multiply-Add / Sub
-          // NOTE_OPT: this is not correct if the final result is negative and wider than 32 bits (64 -> 32 truncation)
+          // NOTE_OPT: this is not correct if the final result is negative and
+          // wider than 32 bits (64 -> 32 truncation)
           if (x->tag == Value::Tag::Mul && x->uses.head == x->uses.tail) {
             // only one user, lhs and rhs are not consts
             // match pattern:
@@ -394,7 +410,8 @@ MachineProgram *machine_code_generation(IrProgram *p) {
             // v4 = v3
             // mla / mls v4, v1, v0
             auto y = dyn_cast<BinaryInst>(x->next);
-            if (y && (y->tag == Value::Tag::Add || y->tag == Value::Tag::Sub) && y->rhs.value == x) {
+            if (y && (y->tag == Value::Tag::Add || y->tag == Value::Tag::Sub) &&
+                y->rhs.value == x) {
               dbg("Multiply-Add/Sub fused to MLA/MLS");
               auto x3 = resolve(y->lhs.value, mbb);
               auto x4 = resolve(y, mbb);
@@ -442,7 +459,8 @@ MachineProgram *machine_code_generation(IrProgram *p) {
             opposite = opposite_cond(cond);
 
             // 一条BinaryInst后紧接着BranchInst，而且前者的结果仅被后者使用，那么就可以不用计算结果，而是直接用bxx的指令
-            if (x->uses.head == x->uses.tail && x->uses.head && isa<BranchInst>(x->uses.head->user) &&
+            if (x->uses.head == x->uses.tail && x->uses.head &&
+                isa<BranchInst>(x->uses.head->user) &&
                 x->next == x->uses.head->user) {
               dbg("Binary comparison inst not computing result");
               cond_map.insert({x, {new_inst, cond}});
@@ -603,7 +621,7 @@ MachineProgram *machine_code_generation(IrProgram *p) {
       // (lhs, vreg) assignments
       ParMv lhs;
       // each bb has a list of (vreg, rhs) parallel moves
-      std::map<BasicBlock *, ParMv> mv;
+      std::map<BasicBlock*, ParMv> mv;
       for (auto inst = bb->insts.head; inst; inst = inst->next) {
         // phi insts must appear at the beginning of bb
         if (auto x = dyn_cast<PhiInst>(inst)) {
@@ -626,7 +644,7 @@ MachineProgram *machine_code_generation(IrProgram *p) {
       // insert parallel mv at the beginning of current mbb
       insert_parallel_mv(lhs, mbb->insts.head);
       // insert parallel mv before the control transfer instruction of pred mbb
-      for (auto &[bb, movs] : mv) {
+      for (auto& [bb, movs] : mv) {
         auto mbb = bb_map[bb];
         insert_parallel_mv(movs, mbb->control_transfer_inst);
       }

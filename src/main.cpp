@@ -14,7 +14,7 @@
 #include "conv/typeck.hpp"
 #include "passes/pass_manager.hpp"
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   bool opt = false, print_usage = false, print_pass = false, dump_token = false;
   char *src = nullptr, *output = nullptr, *ir_file = nullptr;
 
@@ -62,10 +62,10 @@ int main(int argc, char *argv[]) {
   }
 
   if (src == nullptr || print_usage) {
-    fprintf(
-        stderr,
-        "Usage: %s [-l ir_file] [-S] [-p (print passes)] [-d (debug mode)] [-o output_file] [-O level] input_file\n",
-        argv[0]);
+    fprintf(stderr,
+            "Usage: %s [-l ir_file] [-S] [-p (print passes)] [-d (debug mode)] "
+            "[-o output_file] [-O level] input_file\n",
+            argv[0]);
     return !print_usage && SYSTEM_ERROR;
   }
 
@@ -83,13 +83,13 @@ int main(int argc, char *argv[]) {
   dbg("parsing success");
   type_check(program);  // 失败时直接就 exit(1) 了
   dbg("type_check success");
-  auto *ir = convert_ssa(program);
+  auto* ir = convert_ssa(program);
   run_passes(ir, opt);
   if (ir_file != nullptr) {
     std::ofstream(ir_file) << *ir;
   }
   if (output != nullptr) {
-    auto *code = machine_code_generation(ir);
+    auto* code = machine_code_generation(ir);
     run_passes(code, opt);
     std::ofstream(output) << *code;
   }

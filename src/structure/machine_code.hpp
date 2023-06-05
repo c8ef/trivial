@@ -46,8 +46,9 @@ enum class ArmReg {
 enum class ArmCond { Any, Eq, Ne, Ge, Gt, Le, Lt };
 
 inline ArmCond opposite_cond(ArmCond c) {
-  constexpr static ArmCond OPPOSITE[] = {ArmCond::Any, ArmCond::Ne, ArmCond::Eq, ArmCond::Lt,
-                                         ArmCond::Le,  ArmCond::Gt, ArmCond::Ge};
+  constexpr static ArmCond OPPOSITE[] = {ArmCond::Any, ArmCond::Ne, ArmCond::Eq,
+                                         ArmCond::Lt,  ArmCond::Le, ArmCond::Gt,
+                                         ArmCond::Ge};
   return OPPOSITE[(int)c];
 }
 
@@ -76,7 +77,7 @@ struct ArmShift {
   bool is_none() const { return type == None; }
 
   explicit operator std::string() const {
-    const char *name;
+    const char* name;
     switch (type) {
       case ArmShift::Asr:
         name = "asr";
@@ -100,12 +101,12 @@ struct ArmShift {
   }
 };
 
-inline std::ostream &operator<<(std::ostream &os, const ArmShift &shift) {
+inline std::ostream& operator<<(std::ostream& os, const ArmShift& shift) {
   os << std::string(shift);
   return os;
 }
 
-inline std::ostream &operator<<(std::ostream &os, const ArmCond &cond) {
+inline std::ostream& operator<<(std::ostream& os, const ArmCond& cond) {
   if (cond == ArmCond::Eq) {
     os << "eq";
   } else if (cond == ArmCond::Ne) {
@@ -128,16 +129,16 @@ inline std::ostream &operator<<(std::ostream &os, const ArmCond &cond) {
 
 struct MachineProgram {
   ilist<MachineFunc> func;
-  std::vector<Decl *> glob_decl;
-  friend std::ostream &operator<<(std::ostream &os, const MachineProgram &dt);
+  std::vector<Decl*> glob_decl;
+  friend std::ostream& operator<<(std::ostream& os, const MachineProgram& dt);
 };
 
-std::ostream &operator<<(std::ostream &os, const MachineProgram &dt);
+std::ostream& operator<<(std::ostream& os, const MachineProgram& dt);
 
 struct MachineFunc {
   DEFINE_ILIST(MachineFunc)
   ilist<MachineBB> bb;
-  IrFunc *func;
+  IrFunc* func;
   // number of virtual registers allocated
   u32 virtual_max = 0;
   // size of stack allocated for local alloca and spilled registers
@@ -147,19 +148,19 @@ struct MachineFunc {
   // whether lr is allocated
   bool use_lr = false;
   // offset += stack_size + saved_regs * 4;
-  std::vector<MachineInst *> sp_arg_fixup;
+  std::vector<MachineInst*> sp_arg_fixup;
 };
 
 struct MachineBB {
   DEFINE_ILIST(MachineBB)
-  BasicBlock *bb;
+  BasicBlock* bb;
   ilist<MachineInst> insts;
   // predecessor and successor
-  std::vector<MachineBB *> pred;
-  std::array<MachineBB *, 2> succ;
+  std::vector<MachineBB*> pred;
+  std::array<MachineBB*, 2> succ;
   // branch is translated into multiple instructions
   // points to the first one
-  MachineInst *control_transfer_inst = nullptr;
+  MachineInst* control_transfer_inst = nullptr;
   // liveness analysis
   // maybe we should use bitset when performance is bad
   std::set<MachineOperand> liveuse;
@@ -183,17 +184,23 @@ struct MachineOperand {
     return MachineOperand{State::PreColored, n};
   }
 
-  inline static MachineOperand V(int n) { return MachineOperand{State::Virtual, n}; }
-
-  inline static MachineOperand I(int imm) { return MachineOperand{State::Immediate, imm}; }
-
-  // both are PreColored or Allocated, and has the same value
-  bool is_equiv(const MachineOperand &other) const {
-    return (state == State::PreColored || state == State::Allocated) &&
-           (other.state == State::PreColored || other.state == State::Allocated) && value == other.value;
+  inline static MachineOperand V(int n) {
+    return MachineOperand{State::Virtual, n};
   }
 
-  bool operator<(const MachineOperand &other) const {
+  inline static MachineOperand I(int imm) {
+    return MachineOperand{State::Immediate, imm};
+  }
+
+  // both are PreColored or Allocated, and has the same value
+  bool is_equiv(const MachineOperand& other) const {
+    return (state == State::PreColored || state == State::Allocated) &&
+           (other.state == State::PreColored ||
+            other.state == State::Allocated) &&
+           value == other.value;
+  }
+
+  bool operator<(const MachineOperand& other) const {
     if (state != other.state) {
       return state < other.state;
     } else {
@@ -201,15 +208,24 @@ struct MachineOperand {
     }
   }
 
-  bool operator==(const MachineOperand &other) const { return state == other.state && value == other.value; }
+  bool operator==(const MachineOperand& other) const {
+    return state == other.state && value == other.value;
+  }
 
-  bool operator!=(const MachineOperand &other) const { return state != other.state || value != other.value; }
+  bool operator!=(const MachineOperand& other) const {
+    return state != other.state || value != other.value;
+  }
 
   bool is_virtual() const { return state == State::Virtual; }
   bool is_imm() const { return state == State::Immediate; }
   bool is_precolored() const { return state == State::PreColored; }
-  bool is_reg() const { return state == State::PreColored || state == State::Allocated || state == State::Virtual; }
-  bool needs_color() const { return state == State::Virtual || state == State::PreColored; }
+  bool is_reg() const {
+    return state == State::PreColored || state == State::Allocated ||
+           state == State::Virtual;
+  }
+  bool needs_color() const {
+    return state == State::Virtual || state == State::PreColored;
+  }
 
   explicit operator std::string() const {
     char prefix = '?';
@@ -230,7 +246,7 @@ struct MachineOperand {
     return prefix + std::to_string(this->value);
   }
 
-  friend std::ostream &operator<<(std::ostream &os, const MachineOperand &op) {
+  friend std::ostream& operator<<(std::ostream& os, const MachineOperand& op) {
     os << std::string(op);
     return os;
   }
@@ -239,7 +255,7 @@ struct MachineOperand {
 namespace std {
 template <>
 struct hash<MachineOperand> {
-  std::size_t operator()(MachineOperand const &m) const noexcept {
+  std::size_t operator()(MachineOperand const& m) const noexcept {
     // state (2), value (14)
     return ((((size_t)m.state) << 14u) | (u32)m.value) & 0xFFFFu;
   }
@@ -247,7 +263,8 @@ struct hash<MachineOperand> {
 
 template <>
 struct hash<std::pair<MachineOperand, MachineOperand>> {
-  std::size_t operator()(std::pair<MachineOperand, MachineOperand> const &m) const noexcept {
+  std::size_t operator()(
+      std::pair<MachineOperand, MachineOperand> const& m) const noexcept {
     // hash(second), hash(first)
     hash<MachineOperand> hash_func;
     return (hash_func(m.second) << 16u) | hash_func(m.first);
@@ -257,7 +274,7 @@ struct hash<std::pair<MachineOperand, MachineOperand>> {
 
 struct MachineInst {
   DEFINE_ILIST(MachineInst)
-  MachineBB *bb;
+  MachineBB* bb;
 
   enum class Tag {
 #include "op.inc"
@@ -276,12 +293,13 @@ struct MachineInst {
     Comment,  // for printing comments
   } tag;
 
-  MachineInst(Tag tag, MachineBB *insertAtEnd) : bb(insertAtEnd), tag(tag) {
+  MachineInst(Tag tag, MachineBB* insertAtEnd) : bb(insertAtEnd), tag(tag) {
     if (insertAtEnd) {
       insertAtEnd->insts.insertAtEnd(this);
     }
   }
-  MachineInst(Tag tag, MachineInst *insertBefore) : bb(insertBefore->bb), tag(tag) {
+  MachineInst(Tag tag, MachineInst* insertBefore)
+      : bb(insertBefore->bb), tag(tag) {
     if (bb) {
       bb->insts.insertBefore(this, insertBefore);
     }
@@ -297,13 +315,14 @@ struct MIBinary : MachineInst {
   MachineOperand rhs;
   ArmShift shift;
 
-  MIBinary(Tag tag, MachineBB *insertAtEnd) : MachineInst(tag, insertAtEnd) {}
+  MIBinary(Tag tag, MachineBB* insertAtEnd) : MachineInst(tag, insertAtEnd) {}
 
   bool isIdentity() {
     switch (tag) {
       case Tag::Add:
       case Tag::Sub:
-        return dst.is_equiv(lhs) && rhs == MachineOperand::I(0) && shift.type == ArmShift::None;
+        return dst.is_equiv(lhs) && rhs == MachineOperand::I(0) &&
+               shift.type == ArmShift::None;
       default:
         return false;
     }
@@ -316,14 +335,16 @@ struct MIQuaternary : MachineInst {
   MachineOperand lhs;
   MachineOperand rhs;
 
-  MIQuaternary(Tag tag, MachineBB *insertAtEnd) : MachineInst(tag, insertAtEnd) {}
+  MIQuaternary(Tag tag, MachineBB* insertAtEnd)
+      : MachineInst(tag, insertAtEnd) {}
 };
 
 struct MILongMul : MIQuaternary {
   DEFINE_CLASSOF(MachineInst, Tag::LongMul == p->tag);
   MachineOperand dst;
 
-  explicit MILongMul(MachineBB *insertAtEnd) : MIQuaternary(Tag::LongMul, insertAtEnd) {}
+  explicit MILongMul(MachineBB* insertAtEnd)
+      : MIQuaternary(Tag::LongMul, insertAtEnd) {}
 };
 
 struct MIFma : MIQuaternary {
@@ -334,8 +355,11 @@ struct MIFma : MIQuaternary {
   bool sign;
   ArmCond cond;
 
-  explicit MIFma(bool add, bool sign, MachineBB *insertAtEnd)
-      : MIQuaternary(Tag::FMA, insertAtEnd), add(add), sign(sign), cond(ArmCond::Any) {}
+  explicit MIFma(bool add, bool sign, MachineBB* insertAtEnd)
+      : MIQuaternary(Tag::FMA, insertAtEnd),
+        add(add),
+        sign(sign),
+        cond(ArmCond::Any) {}
 };
 
 struct MIMove : MachineInst {
@@ -345,20 +369,25 @@ struct MIMove : MachineInst {
   MachineOperand rhs;
   ArmShift shift;
 
-  bool is_simple() { return cond == ArmCond::Any && shift.type == ArmShift::None; }
+  bool is_simple() {
+    return cond == ArmCond::Any && shift.type == ArmShift::None;
+  }
 
-  MIMove(MachineBB *insertAtEnd) : MachineInst(Tag::Mv, insertAtEnd), cond(ArmCond::Any) {}
-  MIMove(MachineBB *insertAtBegin, int) : MachineInst(Tag::Mv), cond(ArmCond::Any) {
+  MIMove(MachineBB* insertAtEnd)
+      : MachineInst(Tag::Mv, insertAtEnd), cond(ArmCond::Any) {}
+  MIMove(MachineBB* insertAtBegin, int)
+      : MachineInst(Tag::Mv), cond(ArmCond::Any) {
     if (insertAtBegin) {
       bb = insertAtBegin;
       insertAtBegin->insts.insertAtBegin(this);
     }
   }
-  MIMove(MachineInst *insertBefore) : MachineInst(Tag::Mv, insertBefore), cond(ArmCond::Any) {}
+  MIMove(MachineInst* insertBefore)
+      : MachineInst(Tag::Mv, insertBefore), cond(ArmCond::Any) {}
 };
 
 struct MIMoveCompare {
-  bool operator()(MIMove *const &lhs, const MIMove *const &rhs) const {
+  bool operator()(MIMove* const& lhs, const MIMove* const& rhs) const {
     if (lhs->cond != rhs->cond) return lhs->cond < rhs->cond;
     if (lhs->dst != rhs->dst) return lhs->dst < rhs->dst;
     if (lhs->rhs != rhs->rhs) return lhs->rhs < rhs->rhs;
@@ -369,20 +398,21 @@ struct MIMoveCompare {
 struct MIBranch : MachineInst {
   DEFINE_CLASSOF(MachineInst, p->tag == Tag::Branch);
   ArmCond cond;
-  MachineBB *target;
-  MIBranch(MachineBB *insertAtEnd) : MachineInst(Tag::Branch, insertAtEnd) {}
+  MachineBB* target;
+  MIBranch(MachineBB* insertAtEnd) : MachineInst(Tag::Branch, insertAtEnd) {}
 };
 
 struct MIJump : MachineInst {
   DEFINE_CLASSOF(MachineInst, p->tag == Tag::Jump);
-  MachineBB *target;
+  MachineBB* target;
 
-  MIJump(MachineBB *target, MachineBB *insertAtEnd) : MachineInst(Tag::Jump, insertAtEnd), target(target) {}
+  MIJump(MachineBB* target, MachineBB* insertAtEnd)
+      : MachineInst(Tag::Jump, insertAtEnd), target(target) {}
 };
 
 struct MIReturn : MachineInst {
   DEFINE_CLASSOF(MachineInst, p->tag == Tag::Return);
-  MIReturn(MachineBB *insertAtEnd) : MachineInst(Tag::Return, insertAtEnd) {}
+  MIReturn(MachineBB* insertAtEnd) : MachineInst(Tag::Return, insertAtEnd) {}
 };
 
 struct MIAccess : MachineInst {
@@ -396,8 +426,10 @@ struct MIAccess : MachineInst {
   MachineOperand offset;
   i32 shift;
   ArmCond cond;
-  MIAccess(MachineInst::Tag tag, MachineBB *insertAtEnd) : MachineInst(tag, insertAtEnd), cond(ArmCond::Any) {}
-  MIAccess(MachineInst::Tag tag, MachineInst *insertBefore) : MachineInst(tag, insertBefore), cond(ArmCond::Any) {}
+  MIAccess(MachineInst::Tag tag, MachineBB* insertAtEnd)
+      : MachineInst(tag, insertAtEnd), cond(ArmCond::Any) {}
+  MIAccess(MachineInst::Tag tag, MachineInst* insertBefore)
+      : MachineInst(tag, insertBefore), cond(ArmCond::Any) {}
   MIAccess(MachineInst::Tag tag) : MachineInst(tag), cond(ArmCond::Any) {}
 };
 
@@ -405,9 +437,9 @@ struct MILoad : MIAccess {
   DEFINE_CLASSOF(MachineInst, p->tag == Tag::Load);
   MachineOperand dst;
 
-  MILoad(MachineBB *insertAtEnd) : MIAccess(Tag::Load, insertAtEnd) {}
-  MILoad(MachineInst *insertBefore) : MIAccess(Tag::Load, insertBefore) {}
-  MILoad(MachineBB *insertAtBegin, int) : MIAccess(Tag::Load) {
+  MILoad(MachineBB* insertAtEnd) : MIAccess(Tag::Load, insertAtEnd) {}
+  MILoad(MachineInst* insertBefore) : MIAccess(Tag::Load, insertBefore) {}
+  MILoad(MachineBB* insertAtBegin, int) : MIAccess(Tag::Load) {
     bb = insertAtBegin;
     insertAtBegin->insts.insertAtBegin(this);
   }
@@ -417,7 +449,8 @@ struct MIStore : MIAccess {
   DEFINE_CLASSOF(MachineInst, p->tag == Tag::Store);
   MachineOperand data;
 
-  explicit MIStore(MachineBB *insertAtEnd) : MIAccess(Tag::Store, insertAtEnd) {}
+  explicit MIStore(MachineBB* insertAtEnd)
+      : MIAccess(Tag::Store, insertAtEnd) {}
   MIStore() : MIAccess(Tag::Store) {}
 };
 
@@ -426,22 +459,25 @@ struct MICompare : MachineInst {
   MachineOperand lhs;
   MachineOperand rhs;
 
-  explicit MICompare(MachineBB *insertAtEnd) : MachineInst(Tag::Compare, insertAtEnd) {}
+  explicit MICompare(MachineBB* insertAtEnd)
+      : MachineInst(Tag::Compare, insertAtEnd) {}
 };
 
 struct MICall : MachineInst {
   DEFINE_CLASSOF(MachineInst, p->tag == Tag::Call);
-  Func *func;
+  Func* func;
 
-  explicit MICall(MachineBB *insertAtEnd) : MachineInst(Tag::Call, insertAtEnd) {}
+  explicit MICall(MachineBB* insertAtEnd)
+      : MachineInst(Tag::Call, insertAtEnd) {}
 };
 
 struct MIGlobal : MachineInst {
   DEFINE_CLASSOF(MachineInst, p->tag == Tag::Global);
   MachineOperand dst;
-  Decl *sym;
+  Decl* sym;
 
-  MIGlobal(Decl *sym, MachineBB *insertAtBegin) : MachineInst(Tag::Global), sym(sym) {
+  MIGlobal(Decl* sym, MachineBB* insertAtBegin)
+      : MachineInst(Tag::Global), sym(sym) {
     insertAtBegin->insts.insertAtBegin(this);
   }
 };
@@ -450,7 +486,8 @@ struct MIComment : MachineInst {
   DEFINE_CLASSOF(MachineInst, p->tag == Tag::Comment);
   std::string content;
 
-  MIComment(std::string &&content, MachineBB *insertAtEnd) : MachineInst(Tag::Comment, insertAtEnd), content(content) {}
-  MIComment(std::string &&content, MachineInst *insertBefore)
+  MIComment(std::string&& content, MachineBB* insertAtEnd)
+      : MachineInst(Tag::Comment, insertAtEnd), content(content) {}
+  MIComment(std::string&& content, MachineInst* insertBefore)
       : MachineInst(Tag::Comment, insertBefore), content(content) {}
 };

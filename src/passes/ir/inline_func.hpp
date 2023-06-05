@@ -2,4 +2,4 @@
 
 #include "../../structure/ir.hpp"
 
-void inline_func(IrProgram *p);
+void inline_func(IrProgram* p);

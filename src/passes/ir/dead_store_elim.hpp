@@ -1,3 +1,3 @@
 #include "../../structure/ir.hpp"
 
-void dead_store_elim(IrFunc *f);
+void dead_store_elim(IrFunc* f);

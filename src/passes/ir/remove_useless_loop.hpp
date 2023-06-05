@@ -1,3 +1,3 @@
 #include "../../structure/ir.hpp"
 
-bool remove_useless_loop(IrFunc *f);
+bool remove_useless_loop(IrFunc* f);

@@ -7,25 +7,25 @@
 
 #include "token.hpp"
 
-inline const char *kKeywords[] = {MIMIC_KEYWORDS(MIMIC_EXPAND_SECOND)};
-inline const char *kOperators[] = {MIMIC_OPERATORS(MIMIC_EXPAND_SECOND)};
+inline const char* kKeywords[] = {MIMIC_KEYWORDS(MIMIC_EXPAND_SECOND)};
+inline const char* kOperators[] = {MIMIC_OPERATORS(MIMIC_EXPAND_SECOND)};
 
 class Lexer {
  public:
   Lexer() { Reset(nullptr); }
-  Lexer(std::istream *in) { Reset(in); }
+  Lexer(std::istream* in) { Reset(in); }
 
   // reset lexer status
   void Reset();
   // reset lexer status (including input stream)
-  void Reset(std::istream *in);
+  void Reset(std::istream* in);
   // get next token from input stream
   Token NextToken();
 
   void DumpTokens();
 
   // identifiers
-  const std::string &id_val() const { return id_val_; }
+  const std::string& id_val() const { return id_val_; }
   // integer values
   std::int64_t int_val() const { return int_val_; }
   // keywords
@@ -56,7 +56,7 @@ class Lexer {
   Token HandleBlockComment();
   Token HandleEOL();
 
-  std::istream *in_;
+  std::istream* in_;
   char last_char_;
   // value of token
   std::string id_val_;
