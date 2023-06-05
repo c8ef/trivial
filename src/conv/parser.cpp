@@ -109,9 +109,9 @@ Func Parser::ParseFunction(Keyword ret_type, std::string id) {
   }
 
   if (ret_type == Keyword::Int) {
-    return Func{true, id, params, *block};
+    return Func{true, id, params, *((Block *)block)};
   } else {
-    return Func{false, id, params, *block};
+    return Func{false, id, params, *((Block *)block)};
   }
 }
 
