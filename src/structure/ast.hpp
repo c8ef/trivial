@@ -12,7 +12,22 @@ struct Func;
 
 struct Expr {
   enum Tag {
-#include "op.inc"  // Binary
+    // Binary Operator Start
+    Add,
+    Sub,
+    Rsb,
+    Mul,
+    Div,
+    Mod,
+    Lt,
+    Le,
+    Ge,
+    Gt,
+    Eq,
+    Ne,
+    And,
+    Or,
+    // Binary Operator End
     Call,
     Index,
     IntConst
@@ -155,7 +170,7 @@ struct Return : Stmt {
 struct IrFunc;
 
 struct Func {
-  // 返回类型只能是int/void，因此只记录是否是int
+  // return type can only be void or int
   bool is_int;
   std::string name;
   // 只是用Decl来复用一下代码，其实不能算是Decl，is_const / is_glob /
@@ -171,6 +186,5 @@ struct Func {
 };
 
 struct Program {
-  // 我并不想用variant的，把函数和变量放在两个vector里更好，这样做是为了记录相对位置关系
   std::vector<std::variant<Func, Decl>> glob;
 };

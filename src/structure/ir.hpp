@@ -28,7 +28,22 @@ struct Value {
   ilist<Use> uses;
   // tag
   enum class Tag {
-#include "op.inc"  // Binary
+    // Binary Operator Start
+    Add,
+    Sub,
+    Rsb,
+    Mul,
+    Div,
+    Mod,
+    Lt,
+    Le,
+    Ge,
+    Gt,
+    Eq,
+    Ne,
+    And,
+    Or,
+    // Binary Operator End
     Branch,
     Jump,
     Return,  // Control flow

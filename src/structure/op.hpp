@@ -3,10 +3,24 @@
 #include "common.hpp"
 
 namespace op {
-// 我希望Op和整数能够互相转化，所以不用enum class
-// 同时我希望Op的成员不要暴露在全局作用域中，所以用一个namespace包起来
+
 enum Op {
-#include "op.inc"
+  // Binary Operator Start
+  Add,
+  Sub,
+  Rsb,
+  Mul,
+  Div,
+  Mod,
+  Lt,
+  Le,
+  Ge,
+  Gt,
+  Eq,
+  Ne,
+  And,
+  Or,
+  // Binary Operator End
 };
 
 inline i32 eval(Op op, i32 l, i32 r) {
@@ -19,7 +33,7 @@ inline i32 eval(Op op, i32 l, i32 r) {
       return r - l;
     case Mul:
       return l * r;
-    // 除0就随它去吧，反正我们对于错误都是直接退出的
+    // we do not handle the r == 0 case here
     case Div:
       return l / r;
     case Mod:
