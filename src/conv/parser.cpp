@@ -293,21 +293,15 @@ Stmt* Parser::ParseBare() {
   if (expr->tag == Expr::Index && IsTokenOperator(Operator::Assign)) {
     NextToken();
     auto* rhs = ParseExpr();
-    if (!rhs) {
-      return nullptr;
-    }
-    if (!ExpectChar(';')) {
-      return nullptr;
-    }
+    if (rhs == nullptr) return nullptr;
+    if (!ExpectChar(';')) return nullptr;
+
     return new Assign{Stmt::Assign, ((Index*)expr)->name, ((Index*)expr)->dims,
                       rhs};
   }
-  if (!expr) {
-    return nullptr;
-  }
-  if (!ExpectChar(';')) {
-    return nullptr;
-  }
+  if (expr == nullptr) return nullptr;
+  if (!ExpectChar(';')) return nullptr;
+
   return new ExprStmt{Stmt::ExprStmt, expr};
 }
 
@@ -432,10 +426,7 @@ Expr* Parser::ParseFactor() {
   if (IsTokenChar('(')) {
     NextToken();
     expr = ParseExpr();
-    if (!ExpectChar(')')) {
-      std::cerr << "brace doesn't match\n";
-      return nullptr;
-    }
+    if (!ExpectChar(')')) return nullptr;
     return expr;
   }
 
@@ -486,9 +477,8 @@ std::vector<Expr*> Parser::ParseExprList() {
     }
   }
 
-  if (!ExpectChar(')')) {
-    return {};
-  }
+  if (!ExpectChar(')')) return {};
+
   return args;
 }
 
@@ -504,11 +494,9 @@ std::vector<Expr*> Parser::ParseArrayDims() {
     }
     dims.push_back(dim);
 
-    if (!IsTokenChar(']')) {
-      std::cerr << "expect ']'\n";
+    if (!ExpectChar(']')) {
       return {};
     }
-    NextToken();
   }
   return dims;
 }
