@@ -102,7 +102,7 @@ static inline void run_pass(IntermediateProgram p, const PassDesc& desc) {
       p);
 }
 
-void run_passes(IntermediateProgram p, bool opt) {
+void run_passes(IntermediateProgram p) {
   if (std::get_if<MachineProgram*>(&p)) {
     for (auto& desc : asm_passes) {
       run_pass(p, desc);

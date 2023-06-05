@@ -5,5 +5,5 @@
 
 using IntermediateProgram = std::variant<IrProgram*, MachineProgram*>;
 
-void run_passes(IntermediateProgram p, bool opt);
+void run_passes(IntermediateProgram p);
 void print_passes();
