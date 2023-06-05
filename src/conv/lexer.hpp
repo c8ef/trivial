@@ -7,13 +7,15 @@
 
 #include "conv/token.hpp"
 
-inline const char* kKeywords[] = {MIMIC_KEYWORDS(MIMIC_EXPAND_SECOND)};
-inline const char* kOperators[] = {MIMIC_OPERATORS(MIMIC_EXPAND_SECOND)};
+inline constexpr const char* kKeywords[] = {
+    MIMIC_KEYWORDS(MIMIC_EXPAND_SECOND)};
+inline constexpr const char* kOperators[] = {
+    MIMIC_OPERATORS(MIMIC_EXPAND_SECOND)};
 
 class Lexer {
  public:
   Lexer() { Reset(nullptr); }
-  Lexer(std::istream* in) { Reset(in); }
+  explicit Lexer(std::istream* in) { Reset(in); }
 
   // reset lexer status
   void Reset();
@@ -21,7 +23,7 @@ class Lexer {
   void Reset(std::istream* in);
   // get next token from input stream
   Token NextToken();
-
+  // dump the lexer output
   void DumpTokens();
 
   // identifiers
@@ -36,7 +38,7 @@ class Lexer {
   char other_val() const { return other_val_; }
 
  private:
-  bool IsEOF() { return !in_ || in_->eof(); }
+  bool IsEOF() { return (in_ == nullptr) || in_->eof(); }
   bool IsEOL() { return IsEOF() || last_char_ == '\n' || last_char_ == '\r'; }
   void NextChar() {
     if (IsEOF()) return;
