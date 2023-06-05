@@ -17,5 +17,5 @@ static int timing = 0;
 
 __attribute((destructor)) void after_main();
 
-void _sysy_starttime();
-void _sysy_stoptime();
+void starttime();
+void stoptime();

@@ -443,7 +443,7 @@ Expr* Parser::ParseFactor() {
 
     if (IsTokenChar('(')) {
       auto args = ParseExprList();
-      return new Call{id, args, 0};
+      return new Call{id, args};
     }
 
     auto dims = ParseArrayDims();
