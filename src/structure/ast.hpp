@@ -29,7 +29,7 @@ struct Binary : Expr {
 
 struct Index : Expr {
   DEFINE_CLASSOF(Expr, p->tag == Tag::Index);
-  std::string_view name;
+  std::string name;
   // dims为空时即是直接访问普通变量
   std::vector<Expr *> dims;
   Decl *lhs_sym;  // typeck前是nullptr，若typeck成功则非空
@@ -43,7 +43,7 @@ struct IntConst : Expr {
 
 struct Call : Expr {
   DEFINE_CLASSOF(Expr, p->tag == Tag::Call);
-  std::string_view func;
+  std::string func;
   std::vector<Expr *> args;
   Func *f = nullptr;  // typeck前是nullptr，若typeck成功则非空
 
@@ -83,7 +83,7 @@ struct Decl {
   bool is_const;
   bool is_glob;
   bool has_init;  // 配合init使用
-  std::string_view name;
+  std::string name;
   // 基本类型总是int，所以不记录，只记录数组维度
   // dims[0]可能是nullptr，当且仅当Decl用于Func::params，且参数形如int a[][10]时；其他情况下每个元素都非空
   // 经过typeck后，每个维度保存的result是包括它在内右边所有维度的乘积，例如int[2][3][4]就是{24, 12, 4}
@@ -105,7 +105,7 @@ struct Stmt {
 
 struct Assign : Stmt {
   DEFINE_CLASSOF(Stmt, p->tag == Stmt::Assign);
-  std::string_view ident;
+  std::string ident;
   std::vector<Expr *> dims;
   Expr *rhs;
   Decl *lhs_sym;  // typeck前是nullptr，若typeck成功则非空
@@ -160,7 +160,7 @@ struct IrFunc;
 struct Func {
   // 返回类型只能是int/void，因此只记录是否是int
   bool is_int;
-  std::string_view name;
+  std::string name;
   // 只是用Decl来复用一下代码，其实不能算是Decl，is_const / is_glob / has_init总是false
   std::vector<Decl> params;
   Block body;

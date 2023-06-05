@@ -140,7 +140,7 @@ std::vector<Decl> Parser::ParseDecl(bool is_const, std::string first_id) {
   std::vector<Decl> decls;
   // now cur token pass the first id
   auto first_dims = ParseArrayDims();
-  if (IsTokenChar('=')) {
+  if (IsTokenOperator(Operator::Assign)) {
     NextToken();
     auto init_list = ParseInitList();
     decls.push_back(Decl{false, false, true, first_id, first_dims, init_list});

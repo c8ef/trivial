@@ -80,24 +80,19 @@ int main(int argc, char *argv[]) {
   Parser parser(lexer);
   Program program = parser.ParseProgram();
 
-  // // run parser
-  // if (Program *p = std::get_if<0>(&result)) {
-  //   dbg("parsing success");
-  //   type_check(*p);  // 失败时直接就 exit(1) 了
-  //   dbg("type_check success");
-  //   auto *ir = convert_ssa(*p);
-  //   run_passes(ir, opt);
-  //   if (ir_file != nullptr) {
-  //     std::ofstream(ir_file) << *ir;
-  //   }
-  //   if (output != nullptr) {
-  //     auto *code = machine_code_generation(ir);
-  //     run_passes(code, opt);
-  //     std::ofstream(output) << *code;
-  //   }
-  // } else if (Token *t = std::get_if<1>(&result)) {
-  //   ERR_EXIT(PARSING_ERROR, "parsing error", t->kind, t->line, t->col, t->piece);
-  // }
+  dbg("parsing success");
+  type_check(program);  // 失败时直接就 exit(1) 了
+  dbg("type_check success");
+  auto *ir = convert_ssa(program);
+  run_passes(ir, opt);
+  if (ir_file != nullptr) {
+    std::ofstream(ir_file) << *ir;
+  }
+  if (output != nullptr) {
+    auto *code = machine_code_generation(ir);
+    run_passes(code, opt);
+    std::ofstream(output) << *code;
+  }
 
   free(output);
   free(ir_file);
