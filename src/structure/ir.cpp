@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 
-#include "ast.hpp"
+#include "structure/ast.hpp"
 
 void Value::deleteValue() {
   if (auto x = dyn_cast<BinaryInst>(this))
@@ -35,7 +35,7 @@ void Value::deleteValue() {
     delete x;
   else if (auto x = dyn_cast<ParamRef>(this))
     delete x;
-  else  // 假定永远只使用UndefValue::INSTANCE，且永远不会调用deleteValue
+  else  // 假定永远只使用 UndefValue::INSTANCE，且永远不会调用 deleteValue
     UNREACHABLE();
 }
 
@@ -186,7 +186,7 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
     }
     os << "\tbr label %_0" << endl;
 
-    // bb的标号没有必要用IndexMapper，而且IndexMapper的编号是先到先得，这看着并不是很舒服
+    // bb 的标号没有必要用 IndexMapper，而且 IndexMapper 的编号是先到先得，这看着并不是很舒服
     std::map<BasicBlock*, u32> bb_index;
     IndexMapper<Value> v_index;
     for (auto bb = f->bb.head; bb; bb = bb->next) {
@@ -200,8 +200,8 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
         if (i != 0) os << ", ";
         os << "%_" << bb_index.find(bb->pred[i])->second;
       }
-      // 这里原来会输出dom info的，现在不输出了，因为现在所有pass结束后dom
-      // info不是有效的
+      // 这里原来会输出 dom info 的，现在不输出了，因为现在所有 pass 结束后 dom
+      // info 不是有效的
       os << endl;
       for (Inst* i = bb->mem_phis.head; i; i = i->next) {
         auto x = static_cast<MemPhiInst*>(i);

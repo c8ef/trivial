@@ -1,6 +1,6 @@
-#include "dead_store_elim.hpp"
+#include "passes/ir/dead_store_elim.hpp"
 
-#include "memdep.hpp"
+#include "passes/ir/memdep.hpp"
 
 void dead_store_elim(IrFunc* f) {
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {

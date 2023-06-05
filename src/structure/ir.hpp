@@ -10,8 +10,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include "../casting.hpp"
-#include "../common.hpp"
+#include "casting.hpp"
+#include "common.hpp"
 
 // 声明ast中用到的类型，从而让这里不需要include
 // "ast.hpp"。真正需要访问字段的文件里自己include

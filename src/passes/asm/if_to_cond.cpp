@@ -1,4 +1,4 @@
-#include "if_to_cond.hpp"
+#include "passes/asm/if_to_cond.hpp"
 
 void if_to_cond(MachineFunc* f) {
   for (auto bb = f->bb.head; bb; bb = bb->next) {

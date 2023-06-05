@@ -1,6 +1,6 @@
-#include "remove_unused_function.hpp"
+#include "passes/ir/remove_unused_function.hpp"
 
-#include "../../structure/ast.hpp"
+#include "structure/ast.hpp"
 
 void remove_unused_function(IrProgram* p) {
   for (auto f = p->func.head; f; f = f->next) {

@@ -1,4 +1,4 @@
-#include "simplify_asm.hpp"
+#include "passes/asm/simplify_asm.hpp"
 
 void simplify_asm(MachineFunc* f) {
   for (auto bb = f->bb.head; bb; bb = bb->next) {

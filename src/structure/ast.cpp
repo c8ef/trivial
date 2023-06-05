@@ -1,4 +1,4 @@
-#include "ast.hpp"
+#include "structure/ast.hpp"
 
 IntConst IntConst::ZERO{Expr::IntConst, 0, 0};
 Break Break::INSTANCE{Stmt::Break};

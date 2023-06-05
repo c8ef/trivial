@@ -1,6 +1,6 @@
-#include "dce.hpp"
+#include "passes/ir/dce.hpp"
 
-#include "remove_useless_loop.hpp"
+#include "passes/ir/remove_useless_loop.hpp"
 
 static void dfs(std::unordered_set<Inst*>& vis, Inst* i) {
   if (!vis.insert(i).second) return;
@@ -18,7 +18,7 @@ again:
       if (i->has_side_effect()) dfs(vis, i);
     }
   }
-  // 无用的指令间可能相互使用，所以需要先清空operand，否则delete的时候会试图维护已经delete掉的指令的uses
+  // 无用的指令间可能相互使用，所以需要先清空 operand，否则 delete 的时候会试图维护已经 delete 掉的指令的 uses
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
     for (Inst* i = bb->insts.head; i; i = i->next) {
       if (vis.find(i) == vis.end()) {

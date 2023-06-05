@@ -1,5 +1,5 @@
 #pragma once
 
-#include "../../structure/ir.hpp"
+#include "structure/ir.hpp"
 
 void remove_unused_function(IrProgram* p);

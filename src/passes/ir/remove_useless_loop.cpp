@@ -1,18 +1,18 @@
-#include "remove_useless_loop.hpp"
+#include "passes/ir/remove_useless_loop.hpp"
 
-#include "cfg.hpp"
+#include "passes/ir/cfg.hpp"
 
 bool remove_useless_loop(IrFunc* f) {
   std::vector<Loop*> deepest = compute_loop_info(f).deepest_loops();
   bool changed = false;
   for (Loop* l : deepest) {
-    // 变量需要提前定义，因为goto不能跳过变量初始化
+    // 变量需要提前定义，因为 goto 不能跳过变量初始化
     BasicBlock* pre_header = nullptr;
     BasicBlock* unique_exit = nullptr;
-    std::vector<BasicBlock*> exiting;  // 包含于unique_exit的pred
+    std::vector<BasicBlock*> exiting;  // 包含于 unique_exit 的 pred
     for (BasicBlock* p : l->bbs[0]->pred) {
       if (std::find(l->bbs.begin(), l->bbs.end(), p) == l->bbs.end()) {
-        if (pre_header) goto fail;  // 有多于一个从循环外跳转到循环头的bb，失败
+        if (pre_header) goto fail;  // 有多于一个从循环外跳转到循环头的 bb，失败
         pre_header = p;
       }
     }
@@ -21,7 +21,7 @@ bool remove_useless_loop(IrFunc* f) {
       for (BasicBlock* s : bb->succ()) {
         if (s && std::find(l->bbs.begin(), l->bbs.end(), s) == l->bbs.end()) {
           if (unique_exit && unique_exit != s)
-            goto fail;  // 有多于一个出口bb，失败
+            goto fail;  // 有多于一个出口 bb，失败
           unique_exit = s;
           exiting.push_back(bb);
         }
@@ -41,7 +41,7 @@ bool remove_useless_loop(IrFunc* f) {
                                            unique_exit->pred.end(), *it) -
                                  unique_exit->pred.begin()]
                   .value) {
-            goto fail;  // 循环出口处phi依赖于从循环中哪个bb退出，失败
+            goto fail;  // 循环出口处 phi 依赖于从循环中哪个 bb 退出，失败
           }
         }
       } else
@@ -53,9 +53,9 @@ bool remove_useless_loop(IrFunc* f) {
         if (auto x = dyn_cast<CallInst>(i); x && x->func->has_side_effect)
           goto fail;
         // 检查是否被循环外的指令使用
-        // LLVM的LoopDeletion
-        // Pass不检查这个，而是在上面一个循环中，检查fst是否是循环中定义的
-        // 这是因为它保证当前的IR是LCSSA的形式，任何循环中定义的值想要被被外界使用，都需要经过PHI
+        // LLVM 的 LoopDeletion
+        // Pass 不检查这个，而是在上面一个循环中，检查 fst 是否是循环中定义的
+        // 这是因为它保证当前的 IR 是 LCSSA 的形式，任何循环中定义的值想要被被外界使用，都需要经过 PHI
         // 我们没有这个保证，所以不能这样检查
         for (Use* u = i->uses.head; u; u = u->next) {
           if (std::find(l->bbs.begin(), l->bbs.end(), u->user->bb) ==

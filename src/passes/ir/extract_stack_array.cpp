@@ -1,11 +1,11 @@
-#include "extract_stack_array.hpp"
+#include "passes/ir/extract_stack_array.hpp"
 
 #include <cstdlib>
 #include <unordered_set>
 #include <vector>
 
-#include "../../structure/ast.hpp"
-#include "memdep.hpp"
+#include "passes/ir/memdep.hpp"
+#include "structure/ast.hpp"
 
 void extract_stack_array(IrProgram* p) {
   for (auto f = p->func.head; f; f = f->next) {

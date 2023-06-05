@@ -1,8 +1,8 @@
-#include "remove_identical_branch.hpp"
+#include "passes/ir/remove_identical_branch.hpp"
 
 static bool not_singly_used(Inst* i) { return i->uses.head != i->uses.tail; }
 
-// 目前这个pass的唯一作用是针对mv测例进行优化，它经过前面的优化之后得到的pattern类似
+// 目前这个 pass 的唯一作用是针对 mv 测例进行优化，它经过前面的优化之后得到的 pattern 类似
 // bb_if:
 //   ...
 //   if (x == 0) br bb_then else br bb_else
@@ -17,7 +17,7 @@ static bool not_singly_used(Inst* i) { return i->uses.head != i->uses.tail; }
 //   br bb_after
 // bb_after:
 //   ...
-// 目前我没有想到什么general的方法可以优化这种if
+// 目前我没有想到什么 general 的方法可以优化这种 if
 void remove_identical_branch(IrFunc* f) {
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
     auto br = dyn_cast<BranchInst>(bb->insts.tail);

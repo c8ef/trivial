@@ -1,11 +1,11 @@
-#include "memdep.hpp"
+#include "passes/ir/memdep.hpp"
 
 #include <unordered_map>
 
-#include "../../structure/ast.hpp"
-#include "cfg.hpp"
+#include "passes/ir/cfg.hpp"
+#include "structure/ast.hpp"
 
-// 如果一个是另一个的postfix，则可能alias；nullptr相当于通配符
+// 如果一个是另一个的 postfix，则可能 alias；nullptr 相当于通配符
 static bool dim_alias(const std::vector<Expr*>& dim1,
                       const std::vector<Expr*>& dim2) {
   auto pred = [](Expr* l, Expr* r) {
@@ -18,10 +18,10 @@ static bool dim_alias(const std::vector<Expr*>& dim1,
 }
 
 // 目前只考虑用数组的类型/维度来排除alias，不考虑用下标来排除
-// 分三种情况：!dims.empty() && dims[0] == nullptr => 参数数组; 否则is_glob ==
+// 分三种情况：!dims.empty() && dims[0] == nullptr => 参数数组; 否则 is_glob ==
 // true => 全局变量; 否则是局部数组
-// 这个关系是对称的，但不是传递的，例如参数中的int []和int [][5]，int
-// [][10]都alias，但int [][5]和int [][10]不alias
+// 这个关系是对称的，但不是传递的，例如参数中的 int [] 和 int [][5]，int
+// [][10] 都 alias，但 int [][5] 和 int [][10] 不 alias
 bool alias(Decl* arr1, Decl* arr2) {
   if (arr1->is_param_array()) {  // 参数
     if (arr2->is_param_array())
@@ -48,8 +48,10 @@ bool alias(Decl* arr1, Decl* arr2) {
   }
 }
 
-// 如果load的数组不是本函数内定义的，一个函数调用就可能修改其内容，这包括ParamRef和GlobalRef
-// 如果load的数组是本函数内定义的，即是AllocaInst，则只有当其地址被不完全load作为参数传递给一个函数时，这个函数才可能修改它
+// 如果 load 的数组不是本函数内定义的，一个函数调用就可能修改其内容，这包括
+// ParamRef 和 GlobalRef 如果 load 的数组是本函数内定义的，即是
+// AllocaInst，则只有当其地址被不完全 load
+// 作为参数传递给一个函数时，这个函数才可能修改它
 bool is_arr_call_alias(Decl* arr, CallInst* y) {
   return arr->is_param_array() || arr->is_glob ||
          std::any_of(y->args.begin(), y->args.end(), [arr](Use& u) {
@@ -69,9 +71,10 @@ struct LoadInfo {
 };
 
 void clear_memdep(IrFunc* f) {
-  // 如果在同一趟循环中把操作数.set(nullptr)，同时delete，会出现先被delete后维护它的uses链表的情况，所以分两趟循环
-  // 这里也不能用.value =
-  // nullptr，因为不能保证用到的指令最终都被删掉了，例如MemOpInst的mem_token可以是LoadInst
+  // 如果在同一趟循环中把操作数.set(nullptr)，同时 delete，会出现先被 delete
+  // 后维护它的 uses 链表的情况，所以分两趟循环 这里也不能用.value =
+  // nullptr，因为不能保证用到的指令最终都被删掉了，例如 MemOpInst 的 mem_token
+  // 可以是 LoadInst
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
     for (Inst* i = bb->mem_phis.head; i; i = i->next) {
       auto i1 = static_cast<MemPhiInst*>(i);
@@ -109,10 +112,11 @@ void clear_memdep(IrFunc* f) {
   }
 }
 
-// 构造load对store，store对load的依赖关系，分成两趟分别计算
+// 构造 load 对 store，store 对 load 的依赖关系，分成两趟分别计算
 void compute_memdep(IrFunc* f) {
   compute_dom_info(f);
-  // 把所有数组地址相同的load一起考虑，因为相关的store集合计算出来必定是一样的
+  // 把所有数组地址相同的 load 一起考虑，因为相关的 store
+  // 集合计算出来必定是一样的
   std::unordered_map<Decl*, LoadInfo> loads;
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
     for (Inst* i = bb->insts.head; i; i = i->next) {
@@ -121,15 +125,15 @@ void compute_memdep(IrFunc* f) {
         auto [it, inserted] = loads.insert({arr, {(u32)loads.size()}});
         LoadInfo& info = it->second;
         info.loads.push_back(x);
-        if (!inserted) continue;  // stores已经计算过了
+        if (!inserted) continue;  // stores 已经计算过了
         for (BasicBlock* bb1 = f->bb.head; bb1; bb1 = bb1->next) {
           for (Inst* i1 = bb1->insts.head; i1; i1 = i1->next) {
             bool is_alias = false;
             if (auto x = dyn_cast<StoreInst>(i1); x && alias(arr, x->lhs_sym))
               is_alias = true;
             // todo:
-            // 这里可以更仔细地考虑到底是否修改了参数，现在是粗略的判断，如果没有side
-            // effect一定没有修改参数/全局变量
+            // 这里可以更仔细地考虑到底是否修改了参数，现在是粗略的判断，如果没有
+            // side effect一定没有修改参数/全局变量
             else if (auto x = dyn_cast<CallInst>(i1);
                      x && x->func->has_side_effect && is_arr_call_alias(arr, x))
               is_alias = true;
@@ -140,7 +144,7 @@ void compute_memdep(IrFunc* f) {
     }
   }
   auto df = compute_df(f);
-  // 第一趟，构造load对store的依赖关系
+  // 第一趟，构造 load 对 store 的依赖关系
   {
     std::vector<BasicBlock*> worklist;
     for (auto& [arr, info] : loads) {
@@ -200,8 +204,10 @@ void compute_memdep(IrFunc* f) {
       }
     }
   }
-  // 第二趟，构造store对load的依赖关系，虽然store也依赖store，但是后面不会调整store的位置，所以没有必要考虑这个依赖关系
-  // 与第一趟不同，这里不能把一个地址的load放在一起考虑，比如连续两个load，如果一起考虑的话就会认为前一个load不被任何store依赖
+  // 第二趟，构造 store 对 load 的依赖关系，虽然 store 也依赖
+  // store，但是后面不会调整 store 的位置，所以没有必要考虑这个依赖关系
+  // 与第一趟不同，这里不能把一个地址的 load 放在一起考虑，比如连续两个
+  // load，如果一起考虑的话就会认为前一个 load 不被任何 store 依赖
   std::unordered_map<LoadInst*, u32> loads2;
   for (auto& arr_info : loads) {
     for (LoadInst* load : arr_info.second.loads) {
@@ -240,7 +246,7 @@ void compute_memdep(IrFunc* f) {
         bb->vis = true;
         for (Inst* i = bb->mem_phis.head; i; i = i->next) {
           auto i1 = static_cast<MemPhiInst*>(i);
-          // 不考虑第一趟引入的MemPhiInst
+          // 不考虑第一趟引入的 MemPhiInst
           if (auto it = loads2.find(static_cast<LoadInst*>(i1->load_or_arr));
               it != loads2.end()) {
             values[it->second] = i;
@@ -271,7 +277,7 @@ void compute_memdep(IrFunc* f) {
       }
     }
   }
-  // 删除无用的MemPhi，避免不必要的依赖
+  // 删除无用的 MemPhi，避免不必要的依赖
   while (true) {
     bool changed = false;
     for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {

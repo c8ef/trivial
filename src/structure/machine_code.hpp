@@ -5,9 +5,9 @@
 #include <iostream>
 #include <set>
 
-#include "../common.hpp"
-#include "ast.hpp"
-#include "ir.hpp"
+#include "common.hpp"
+#include "structure/ast.hpp"
+#include "structure/ir.hpp"
 
 struct MachineFunc;
 struct MachineBB;

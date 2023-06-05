@@ -1,7 +1,7 @@
-#include "ssa.hpp"
+#include "conv/ssa.hpp"
 
-#include "../casting.hpp"
-#include "../structure/ast.hpp"
+#include "casting.hpp"
+#include "structure/ast.hpp"
 
 struct SsaContext {
   IrProgram* program;
@@ -31,9 +31,9 @@ Value* convert_expr(SsaContext* ctx, Expr* expr) {
             new BinaryInst(Value::Tag::Eq, lhs, ConstValue::get(0), ctx->bb);
         new BranchInst(inv, rhs_bb, after_bb, ctx->bb);
       }
-      // 这里需要pred的大小为2，真正维护pred在最后才做，可以保证是[当前bb,
-      // rhs的实际计算bb]的顺序
-      // 注意rhs的实际计算bb不一定就是rhs_bb，因为rhs也可能是&& ||
+      // 这里需要 pred 的大小为 2，真正维护 pred 在最后才做，可以保证是 [当前
+      // bb, rhs 的实际计算 bb] 的顺序 注意 rhs 的实际计算 bb 不一定就是
+      // rhs_bb，因为 rhs 也可能是&& ||
       after_bb->pred.resize(2);
       ctx->bb = rhs_bb;
       auto rhs = convert_expr(ctx, x->rhs);

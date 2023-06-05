@@ -1,3 +1,3 @@
-#include "../../structure/ir.hpp"
+#include "structure/ir.hpp"
 
 void remove_identical_branch(IrFunc* f);

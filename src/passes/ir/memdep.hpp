@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../structure/ir.hpp"
+#include "structure/ir.hpp"
 
 bool alias(Decl* arr1, Decl* arr2);
 

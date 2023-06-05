@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 
-#include "token.hpp"
+#include "conv/token.hpp"
 
 inline const char* kKeywords[] = {MIMIC_KEYWORDS(MIMIC_EXPAND_SECOND)};
 inline const char* kOperators[] = {MIMIC_OPERATORS(MIMIC_EXPAND_SECOND)};

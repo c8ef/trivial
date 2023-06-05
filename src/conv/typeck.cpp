@@ -1,19 +1,20 @@
-#include "typeck.hpp"
+#include "conv/typeck.hpp"
 
 #include <cstdio>
 #include <cstdlib>
 #include <string>
 #include <unordered_map>
 
-#include "../casting.hpp"
-#include "../common.hpp"
-#include "../structure/op.hpp"
+#include "casting.hpp"
+#include "common.hpp"
+#include "structure/op.hpp"
 
 #define ERR(...) ERR_EXIT(kTypeCheckError, __VA_ARGS__)
 
-// 有两种可能的符号：函数和变量，逻辑上需要一个variant<Func *, Decl
+// 有两种可能的符号：函数和变量，逻辑上需要一个 variant<Func *, Decl
 // *>，但是这太浪费空间了
-// 这两种指针都至少是按4对齐的，所以最后两位不可能是1/2，就用这做discriminant
+// 这两种指针都至少是按 4 对齐的，所以最后两位不可能是 1/2，就用这做
+// discriminant
 struct Symbol {
   size_t p;
 
@@ -86,14 +87,15 @@ struct Env {
     local_stk.pop_back();
   }
 
-  // 数组和标量的初始化都会以flatten_init的形式存储
-  // 即使没有初始化，全局变量也会以0初始化，而局部变量的flatten_init这时是空的
+  // 数组和标量的初始化都会以 flatten_init 的形式存储
+  // 即使没有初始化，全局变量也会以 0 初始化，而局部变量的 flatten_init
+  // 这时是空的
   void ck_decl(Decl& d) {
-    // 每个维度保存的result是包括它在内右边所有维度的乘积
+    // 每个维度保存的 result 是包括它在内右边所有维度的乘积
     for (auto begin = d.dims.rbegin(), it = begin, end = d.dims.rend();
          it < end; ++it) {
       Expr* e = *it;
-      if (e) {  // 函数参数中dims[0]为nullptr
+      if (e) {  // 函数参数中 dims[0] 为 nullptr
         eval(e);
         if (e->result < 0) {
           ERR("array dim < 0");
@@ -111,13 +113,13 @@ struct Env {
       }
     }
     if (d.has_init) {
-      if (d.dims.empty() && d.init.val1) {  // 形如int x = 1
+      if (d.dims.empty() && d.init.val1) {  // 形如 int x = 1
         ck_expr(d.init.val1);
         if (d.is_const || d.is_glob) {
           eval(d.init.val1);
         }
         d.flatten_init.push_back(d.init.val1);
-      } else if (!d.init.val1) {  // 形如int x[1] = {}
+      } else if (!d.init.val1) {  // 形如 int x[1] = {}
         flatten_init(d.init.val2, d.dims.data(), d.dims.data() + d.dims.size(),
                      d.is_const | d.is_glob, d.flatten_init);
       } else {  // 另外两种搭配
@@ -197,10 +199,10 @@ struct Env {
     }
   }
 
-  // src应该都是没有eval过的；这里只处理必须是列表形式的src，不处理单独expr形式的
-  // [dims,
-  // dims_end)组成一个非空slice；dims应该符合Decl::dims的描述，且已经求值完毕
-  // flatten_init可以用于常量和非常量的初始化，由need_eval控制
+  // src 应该都是没有 eval 过的；这里只处理必须是列表形式的 src，不处理单独 expr
+  // 形式的 [dims, dims_end) 组成一个非空 slice；dims 应该符合 Decl::dims
+  // 的描述，且已经求值完毕 flatten_init 可以用于常量和非常量的初始化，由
+  // need_eval 控制
   void flatten_init(std::vector<InitList>& src, Expr** dims, Expr** dims_end,
                     bool need_eval, std::vector<Expr*>& dst) {
     u32 elem_size = dims + 1 < dims_end ? dims[1]->result : 1,
@@ -218,7 +220,7 @@ struct Env {
         }
       } else {
         // 遇到了一个新的列表，它必须恰好填充一个元素
-        // 给前一个未填满的元素补0
+        // 给前一个未填满的元素补 0
         if (cnt != 0) {
           dst.resize(dst.size() + elem_size - cnt, &IntConst::ZERO);
           cnt = 0;
@@ -238,13 +240,14 @@ struct Env {
     }
   }
 
-  // 配合ck_expr使用
+  // 配合 ck_expr 使用
   static bool is_int(std::pair<Expr**, Expr**> t) {
     return t.first && t.first == t.second;
   }
 
-  // 返回Option<&[Expr *]>：
-  // 类型是int时返回空slice，类型是void时返回None，类型是int[]...时返回对应维度的slice
+  // 返回 Option<&[Expr *]>：
+  // 类型是 int 时返回空 slice，类型是 void 时返回 None，类型是
+  // int[]...时返回对应维度的 slice
   std::pair<Expr**, Expr**> ck_expr(Expr* e) {
     const std::pair<Expr**, Expr**> none{},
         empty{reinterpret_cast<Expr**>(8), reinterpret_cast<Expr**>(8)};
@@ -287,7 +290,8 @@ struct Env {
           ERR("index operator expect int operand");
         }
       }
-      // 这里逻辑上总是返回：后面的，但是stl的实现中空vector的指针可能是nullptr，所以加个特判
+      // 这里逻辑上总是返回：后面的，但是 stl 的实现中空 vector 的指针可能是
+      // nullptr，所以加个特判
       return d->dims.empty() ? empty
                              : std::pair{d->dims.data() + x->dims.size(),
                                          d->dims.data() + d->dims.size()};
@@ -299,7 +303,7 @@ struct Env {
     }
   }
 
-  // 能够成功eval的必然是int，所以eval中就不必检查操作数的类型
+  // 能够成功 eval 的必然是 int，所以 eval 中就不必检查操作数的类型
   void eval(Expr* e) {
     if (auto x = dyn_cast<Binary>(e)) {
       eval(x->lhs), eval(x->rhs);

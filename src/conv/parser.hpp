@@ -4,9 +4,9 @@
 #include <string>
 #include <string_view>
 
-#include "../structure/ast.hpp"
-#include "lexer.hpp"
-#include "token.hpp"
+#include "conv/lexer.hpp"
+#include "conv/token.hpp"
+#include "structure/ast.hpp"
 
 class Parser {
  public:

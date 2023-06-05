@@ -1,6 +1,6 @@
-#include "compute_stack_info.hpp"
+#include "passes/asm/compute_stack_info.hpp"
 
-#include "allocate_register.hpp"
+#include "passes/asm/allocate_register.hpp"
 
 void compute_stack_info(MachineFunc* f) {
   for (auto bb = f->bb.head; bb; bb = bb->next) {

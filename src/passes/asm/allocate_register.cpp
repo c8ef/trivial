@@ -1,4 +1,4 @@
-#include "allocate_register.hpp"
+#include "passes/asm/allocate_register.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -6,7 +6,7 @@
 #include <optional>
 #include <set>
 
-#include "../ir/cfg.hpp"
+#include "passes/ir/cfg.hpp"
 
 std::pair<std::vector<MachineOperand>, std::vector<MachineOperand>> get_def_use(
     MachineInst* inst) {

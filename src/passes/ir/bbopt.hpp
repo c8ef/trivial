@@ -1,3 +1,3 @@
-#include "../../structure/ir.hpp"
+#include "structure/ir.hpp"
 
 bool bbopt(IrFunc* f);

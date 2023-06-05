@@ -1,7 +1,7 @@
-#include "inline_func.hpp"
+#include "passes/ir/inline_func.hpp"
 
-#include "../../structure/ast.hpp"
-#include "cfg.hpp"
+#include "passes/ir/cfg.hpp"
+#include "structure/ast.hpp"
 
 void inline_func(IrProgram* p) {
   for (IrFunc* f = p->func.head; f; f = f->next) {
@@ -11,7 +11,7 @@ void inline_func(IrProgram* p) {
       for (Inst* i = bb->insts.head; can_inline && i; i = i->next) {
         if (isa<AllocaInst>(i) || ++inst_cnt >= 64) can_inline = false;
         // todo:
-        // 直接递归调用自身不能被内联，这是实现的限制，理论上应该是可以的，因为现在inline时是直接操作函数，会inline的同时修改它
+        // 直接递归调用自身不能被内联，这是实现的限制，理论上应该是可以的，因为现在 inline 时是直接操作函数，会 inline 的同时修改它
         if (auto x = dyn_cast<CallInst>(i); x && x->func == f)
           can_inline = false;
       }
@@ -69,7 +69,7 @@ void inline_func(IrProgram* p) {
           return args[x->decl - params.data()].value;
         } else {
           assert(!isa<Inst>(
-              v));  // 不同的函数之间可以用相同的各种Value，但是不能用相同的Inst
+              v));  // 不同的函数之间可以用相同的各种 Value，但是不能用相同的 Inst
           return v;
         }
       };
@@ -83,7 +83,7 @@ void inline_func(IrProgram* p) {
         for (BasicBlock* p : bb->pred) {
           cloned->pred.push_back(bb_map.find(p)->second);
         }
-        // phi指令间可能循环引用，还可能引用在自身之后定义的值，需要先定义好，最后再填值
+        // phi 指令间可能循环引用，还可能引用在自身之后定义的值，需要先定义好，最后再填值
         Inst* i = bb->insts.head;
         for (;; i = i->next) {
           if (isa<PhiInst>(i)) {
