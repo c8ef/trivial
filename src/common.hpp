@@ -128,4 +128,4 @@ struct ilist {
   }
 };
 
-extern bool debug_mode;
+inline bool debug_mode{false};
