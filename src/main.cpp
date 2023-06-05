@@ -1,7 +1,7 @@
 #include <fstream>
 #include <string>
 
-#include "argparse/argparse.hpp"
+#include "common.hpp"
 #include "conv/codegen.hpp"
 #include "conv/lexer.hpp"
 #include "conv/parser.hpp"
@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
   try {
     cli.parse_args(argc, argv);
   } catch (const std::runtime_error& err) {
-    std::cerr << err.what() << '\n';
+    spdlog::error(err.what());
     exit(1);
   }
 
@@ -47,7 +47,9 @@ int main(int argc, char* argv[]) {
   output = cli.get<std::string>("--output");
   ir_file = cli.get<std::string>("--ir-file");
 
-  // dbg(src, output, ir_file, opt, print_usage, print_pass, debug_mode);
+  if (debug_mode) {
+    spdlog::set_level(spdlog::level::debug);
+  }
 
   if (print_pass) {
     print_passes();
@@ -56,7 +58,6 @@ int main(int argc, char* argv[]) {
 
   std::ifstream ifs(src);
   Lexer lexer(&ifs);
-
   if (dump_token) {
     lexer.DumpTokens();
     return 0;
@@ -64,10 +65,10 @@ int main(int argc, char* argv[]) {
 
   Parser parser(lexer);
   Program program = parser.ParseProgram();
+  spdlog::debug("parsing success");
+  type_check(program);
+  spdlog::debug("type check success");
 
-  dbg("parsing success");
-  type_check(program);  // 失败时直接就 exit(1) 了
-  dbg("type_check success");
   auto* ir = convert_ssa(program);
   run_passes(ir);
   if (!ir_file.empty()) {

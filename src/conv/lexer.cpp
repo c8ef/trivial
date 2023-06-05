@@ -5,7 +5,8 @@
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
+
+#include "common.hpp"
 
 namespace {
 
@@ -43,7 +44,7 @@ bool IsOperatorChar(char c) {
 }  // namespace
 
 Token Lexer::LogError(std::string_view message) {
-  std::cerr << "Lexer error: " << message << '\n';
+  spdlog::error("Lexer error: {}", message);
   return Token::Error;
 }
 
@@ -195,24 +196,24 @@ void Lexer::DumpTokens() {
   while ((cur_token = NextToken()) != Token::End) {
     switch (cur_token) {
       case Token::End:
-        std::cout << "token{End}\n";
+        spdlog::info("token[End]");
         break;
       case Token::Id:
-        std::cout << "token{Id}: " << id_val_ << '\n';
+        spdlog::info("token[Id]: {}", id_val_);
         break;
       case Token::Int:
-        std::cout << "token{Int}: " << int_val_ << '\n';
+        spdlog::info("token[Int]: {}", int_val_);
         break;
       case Token::Keyword:
-        std::cout << "token{keyword}: " << kKeywords[static_cast<int>(key_val_)]
-                  << '\n';
+        spdlog::info("token[Keyword]: {}",
+                     kKeywords[static_cast<int>(key_val_)]);
         break;
       case Token::Operator:
-        std::cout << "token{operator}: "
-                  << kOperators[static_cast<int>(op_val_)] << '\n';
+        spdlog::info("token[Operator]: {}",
+                     kOperators[static_cast<int>(op_val_)]);
         break;
       case Token::Other:
-        std::cout << "token{other}: " << other_val_ << '\n';
+        spdlog::info("token[Other]: {}", other_val_);
         break;
       default:
         break;

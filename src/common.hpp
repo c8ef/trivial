@@ -3,6 +3,9 @@
 #include <cstdint>
 #include <map>
 
+#include "argparse/argparse.hpp"
+#include "spdlog/spdlog.h"
+
 #define DBG_MACRO_NO_WARNING
 #include "thirdparty/dbg.h"
 
