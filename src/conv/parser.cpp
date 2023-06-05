@@ -159,7 +159,7 @@ std::vector<Decl> Parser::ParseDecl(bool is_const, std::string first_id) {
     NextToken();
 
     auto latter_dims = ParseArrayDims();
-    if (IsTokenChar('=')) {
+    if (IsTokenOperator(Operator::Assign)) {
       NextToken();
       auto latter_init_list = ParseInitList();
       decls.push_back(Decl{false, false, true, id, latter_dims, latter_init_list});
