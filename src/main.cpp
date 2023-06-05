@@ -78,8 +78,7 @@ int main(int argc, char *argv[]) {
   }
 
   Parser parser(lexer);
-  Stmt *expr = parser.ParseStmt();
-  assert(expr);
+  Program program = parser.ParseProgram();
 
   // // run parser
   // if (Program *p = std::get_if<0>(&result)) {

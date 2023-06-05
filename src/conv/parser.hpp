@@ -23,6 +23,12 @@ class Parser {
   // returns true if parser met EOF
   bool ended() const { return ended_; }
 
+  Program ParseProgram();
+  Func ParseFunction(Keyword ret_type, std::string id);
+  Decl ParseParam();
+  std::vector<Decl> ParseDecl(bool is_const, std::string first_id);
+  InitList ParseInitList();
+
   Stmt *ParseStmt();
   Stmt *ParseEmptyStmt();
   Stmt *ParseBare();
@@ -37,6 +43,7 @@ class Parser {
 
   std::vector<Expr *> ParseExprList();
   std::vector<Expr *> ParseArrayDims();
+  std::vector<Expr *> ParseArrayDims0();
 
  private:
   // get next token from lexer and skip all EOLs

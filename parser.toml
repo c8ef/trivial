@@ -52,100 +52,100 @@ priority = [
 '[_A-Za-z]\w*' = 'Ident'
 '.' = '_Err'
 
-[[production]]
-lhs = 'Program'
-ty = 'Program'
-rhs = [
-  { rhs = ['Program', 'Decl'], act = 'for (Decl &d : _2) { d.is_glob = true; _1.glob.emplace_back(std::move(d)); } __ = std::move(_1);' },
-  { rhs = ['Program', 'Func'], act = '_1.glob.emplace_back(std::move(_2)); __ = std::move(_1);' },
-  { rhs = [], act = '__ = Program{};' },
-]
+# [[production]]
+# lhs = 'Program'
+# ty = 'Program'
+# rhs = [
+  # { rhs = ['Program', 'Decl'], act = 'for (Decl &d : _2) { d.is_glob = true; _1.glob.emplace_back(std::move(d)); } __ = std::move(_1);' },
+  # { rhs = ['Program', 'Func'], act = '_1.glob.emplace_back(std::move(_2)); __ = std::move(_1);' },
+  # { rhs = [], act = '__ = Program{};' },
+# ]
 
-[[production]]
-lhs = 'Decl' # 当前的解析会放过一些语法不对的程序，比如 const 没有初值，数组维度不是常数等，反正后续也要检查的，没有太大关系
-ty = 'std::vector<Decl>'
-rhs = [
-  { rhs = ['Const', 'Int', 'DeclList', 'Semi'], act = 'for (Decl &d : _3) { d.is_const = true; } __ = std::move(_3);' },
-  { rhs = ['Int', 'DeclList', 'Semi'], act = '__ = std::move(_2);' },
-]
+# [[production]]
+# lhs = 'Decl' # 当前的解析会放过一些语法不对的程序，比如 const 没有初值，数组维度不是常数等，反正后续也要检查的，没有太大关系
+# ty = 'std::vector<Decl>'
+# rhs = [
+#   { rhs = ['Const', 'Int', 'DeclList', 'Semi'], act = 'for (Decl &d : _3) { d.is_const = true; } __ = std::move(_3);' },
+#   { rhs = ['Int', 'DeclList', 'Semi'], act = '__ = std::move(_2);' },
+# ]
 
-[[production]]
-lhs = 'DeclList'
-ty = 'std::vector<Decl>'
-rhs = [
-  { rhs = ['DeclList1'], act = '__ = std::move(_1);' },
-  { rhs = [], act = '__ = std::vector<Decl>();' },
-]
+# [[production]]
+# lhs = 'DeclList'
+# ty = 'std::vector<Decl>'
+# rhs = [
+#   { rhs = ['DeclList1'], act = '__ = std::move(_1);' },
+#   { rhs = [], act = '__ = std::vector<Decl>();' },
+# ]
 
-[[production]]
-lhs = 'DeclList1'
-ty = 'std::vector<Decl>'
-rhs = [
-  { rhs = ['DeclList1', 'Comma', 'Decl1'], act = '_1.push_back(std::move(_3)); __ = std::move(_1);' },
-  { rhs = ['Decl1'], act = '__ = std::vector{std::move(_1)};' },
-]
+# [[production]]
+# lhs = 'DeclList1'
+# ty = 'std::vector<Decl>'
+# rhs = [
+#   { rhs = ['DeclList1', 'Comma', 'Decl1'], act = '_1.push_back(std::move(_3)); __ = std::move(_1);' },
+#   { rhs = ['Decl1'], act = '__ = std::vector{std::move(_1)};' },
+# ]
 
-[[production]]
-lhs = 'Decl1'
-ty = 'Decl'
-rhs = [
-  { rhs = ['Ident', 'ArrayDims', 'Assign', 'InitList'], act = '__ = Decl{false, false, true, _1.piece, std::move(_2), std::move(_4)};' },
-  { rhs = ['Ident', 'ArrayDims'], act = '__ = Decl{false, false, false, _1.piece, std::move(_2), {}};' },
-]
+# [[production]]
+# lhs = 'Decl1'
+# ty = 'Decl'
+# rhs = [
+#   { rhs = ['Ident', 'ArrayDims', 'Assign', 'InitList'], act = '__ = Decl{false, false, true, _1.piece, std::move(_2), std::move(_4)};' },
+#   { rhs = ['Ident', 'ArrayDims'], act = '__ = Decl{false, false, false, _1.piece, std::move(_2), {}};' },
+# ]
 
-[[production]]
-lhs = 'InitList'
-ty = 'InitList'
-rhs = [
-  { rhs = ['LBrc', 'InitList1', 'RBrc'], act = '__ = InitList{nullptr, std::move(_2)};' },
-  { rhs = ['LBrc', 'RBrc'], act = '__ = InitList{nullptr, {}};' },
-  { rhs = ['Expr'], act = '__ = InitList{_1, {}};' },
-]
+# [[production]]
+# lhs = 'InitList'
+# ty = 'InitList'
+# rhs = [
+#   { rhs = ['LBrc', 'InitList1', 'RBrc'], act = '__ = InitList{nullptr, std::move(_2)};' },
+#   { rhs = ['LBrc', 'RBrc'], act = '__ = InitList{nullptr, {}};' },
+#   { rhs = ['Expr'], act = '__ = InitList{_1, {}};' },
+# ]
 
-[[production]]
-lhs = 'InitList1'
-ty = 'std::vector<InitList>'
-rhs = [
-  { rhs = ['InitList1', 'Comma', 'InitList'], act = '_1.push_back(std::move(_3)); __ = std::move(_1);' },
-  { rhs = ['InitList'], act = '__ = std::vector{std::move(_1)};' },
-]
+# [[production]]
+# lhs = 'InitList1'
+# ty = 'std::vector<InitList>'
+# rhs = [
+#   { rhs = ['InitList1', 'Comma', 'InitList'], act = '_1.push_back(std::move(_3)); __ = std::move(_1);' },
+#   { rhs = ['InitList'], act = '__ = std::vector{std::move(_1)};' },
+# ]
 
-[[production]]
-lhs = 'Func'
-ty = 'Func'
-rhs = [
-  { rhs = ['Int', 'Ident', 'LPar', 'ParamList', 'RPar', 'Block'], act = '__ = Func{true, _2.piece, std::move(_4), std::move(_6)};' },
-  { rhs = ['Void', 'Ident', 'LPar', 'ParamList', 'RPar', 'Block'], act = '__ = Func{false, _2.piece, std::move(_4), std::move(_6)};' },
-]
+# [[production]]
+# lhs = 'Func'
+# ty = 'Func'
+# rhs = [
+#   { rhs = ['Int', 'Ident', 'LPar', 'ParamList', 'RPar', 'Block'], act = '__ = Func{true, _2.piece, std::move(_4), std::move(_6)};' },
+#   { rhs = ['Void', 'Ident', 'LPar', 'ParamList', 'RPar', 'Block'], act = '__ = Func{false, _2.piece, std::move(_4), std::move(_6)};' },
+# ]
 
 # [[production]]
 # lhs = 'Block'
 # ty = 'Block'
 # rhs = [ { rhs = ['LBrc', 'StmtList', 'RBrc'], act = '__ = Block{Stmt::Block, std::move(_2)};' } ]
 
-[[production]]
-lhs = 'ParamList'
-ty = 'std::vector<Decl>'
-rhs = [
-  { rhs = ['ParamList1'], act = '__ = std::move(_1);' },
-  { rhs = [], act = '__ = std::vector<Decl>();' },
-]
+# [[production]]
+# lhs = 'ParamList'
+# ty = 'std::vector<Decl>'
+# rhs = [
+#   { rhs = ['ParamList1'], act = '__ = std::move(_1);' },
+#   { rhs = [], act = '__ = std::vector<Decl>();' },
+# ]
 
-[[production]]
-lhs = 'ParamList1'
-ty = 'std::vector<Decl>'
-rhs = [
-  { rhs = ['ParamList1', 'Comma', 'Param'], act = '_1.push_back(std::move(_3)); __ = std::move(_1);' },
-  { rhs = ['Param'], act = '__ = std::vector{std::move(_1)};' },
-]
+# [[production]]
+# lhs = 'ParamList1'
+# ty = 'std::vector<Decl>'
+# rhs = [
+#   { rhs = ['ParamList1', 'Comma', 'Param'], act = '_1.push_back(std::move(_3)); __ = std::move(_1);' },
+#   { rhs = ['Param'], act = '__ = std::vector{std::move(_1)};' },
+# ]
 
-[[production]]
-lhs = 'Param'
-ty = 'Decl'
-rhs = [
-  { rhs = ['Int', 'Ident', 'ArrayDims0'], act = '__ = Decl{false, false, false, _2.piece, std::move(_3), nullptr};' },
-  { rhs = ['Int', 'Ident'], act = '__ = Decl{false, false, false, _2.piece, {}, nullptr};' },
-]
+# [[production]]
+# lhs = 'Param'
+# ty = 'Decl'
+# rhs = [
+#   { rhs = ['Int', 'Ident', 'ArrayDims0'], act = '__ = Decl{false, false, false, _2.piece, std::move(_3), nullptr};' },
+#   { rhs = ['Int', 'Ident'], act = '__ = Decl{false, false, false, _2.piece, {}, nullptr};' },
+# ]
 
 [[production]]
 lhs = 'Stmt'
@@ -224,13 +224,13 @@ rhs = [
 #   { rhs = ['Expr'], act = '__ = std::vector{_1};' },
 # ]
 
-[[production]]
-lhs = 'ArrayDims0' # 第一个 [] 内必须为空，用于函数参数
-ty = 'std::vector<Expr *>'
-rhs = [
-  { rhs = ['ArrayDims0', 'LBrk', 'Expr', 'RBrk'], act = '_1.push_back(_3); __ = std::move(_1);' },
-  { rhs = ['LBrk', 'RBrk'], act = '__ = std::vector<Expr *>{nullptr};' },
-]
+# [[production]]
+# lhs = 'ArrayDims0' # 第一个 [] 内必须为空，用于函数参数
+# ty = 'std::vector<Expr *>'
+# rhs = [
+#   { rhs = ['ArrayDims0', 'LBrk', 'Expr', 'RBrk'], act = '_1.push_back(_3); __ = std::move(_1);' },
+#   { rhs = ['LBrk', 'RBrk'], act = '__ = std::vector<Expr *>{nullptr};' },
+# ]
 
 # [[production]]
 # lhs = 'ArrayDims'

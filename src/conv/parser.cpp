@@ -41,6 +41,166 @@ inline Expr::Tag GetBinaryOp(Operator op) {
   }
 }
 
+Program Parser::ParseProgram() {
+  Program program;
+
+  while (cur_token_ != Token::End) {
+    bool is_const = false;
+    Keyword type = Keyword::Int;
+
+    if (IsTokenKeyword(Keyword::Const)) {
+      is_const = true;
+      NextToken();
+    }
+
+    if (IsTokenKeyword(Keyword::Int)) {
+      NextToken();
+    } else if (IsTokenKeyword(Keyword::Void)) {
+      type = Keyword::Void;
+    } else {
+      std::cerr << "invalid type\n";
+      return {};
+    }
+
+    if (!ExpectId()) {
+      return {};
+    }
+
+    std::string id = lexer_.id_val();
+    NextToken();
+
+    if (IsTokenChar('(')) {
+      Func func = ParseFunction(type, id);
+      program.glob.emplace_back(func);
+    } else {
+      std::vector<Decl> decls = ParseDecl(is_const, id);
+      for (Decl &decl : decls) {
+        decl.is_glob = true;
+        program.glob.emplace_back(decl);
+      }
+    }
+  }
+
+  return program;
+}
+
+Func Parser::ParseFunction(Keyword ret_type, std::string id) {
+  NextToken();
+  std::vector<Decl> params;
+
+  if (!IsTokenChar(')')) {
+    for (;;) {
+      Decl param = ParseParam();
+      params.push_back(param);
+
+      if (!IsTokenChar(',')) {
+        break;
+      }
+      NextToken();
+    }
+  }
+  if (!ExpectChar(')')) {
+    assert(false);
+  }
+
+  Stmt *block = ParseBlock();
+  if (!block) {
+    assert(false);
+  }
+
+  if (ret_type == Keyword::Int) {
+    return Func{true, id, params, *block};
+  } else {
+    return Func{false, id, params, *block};
+  }
+}
+
+Decl Parser::ParseParam() {
+  if (!IsTokenKeyword(Keyword::Int)) {
+    assert(false);
+  }
+  NextToken();
+
+  if (!ExpectId()) {
+    assert(false);
+  }
+
+  std::string id = lexer_.id_val();
+  NextToken();
+
+  std::vector<Expr *> dims;
+  if (IsTokenChar('[')) {
+    dims = ParseArrayDims0();
+    return Decl{false, false, false, id, dims, nullptr};
+  }
+  return Decl{false, false, false, id, {}, nullptr};
+}
+
+std::vector<Decl> Parser::ParseDecl(bool is_const, std::string first_id) {
+  std::vector<Decl> decls;
+  // now cur token pass the first id
+  auto first_dims = ParseArrayDims();
+  if (IsTokenChar('=')) {
+    NextToken();
+    auto init_list = ParseInitList();
+    decls.push_back(Decl{false, false, true, first_id, first_dims, init_list});
+  } else {
+    decls.push_back(Decl{false, false, false, first_id, first_dims, {}});
+  }
+
+  while (!IsTokenChar(';')) {
+    NextToken();  // eat ','
+
+    if (!ExpectId()) {
+      return {};
+    }
+
+    std::string id = lexer_.id_val();
+    NextToken();
+
+    auto latter_dims = ParseArrayDims();
+    if (IsTokenChar('=')) {
+      NextToken();
+      auto latter_init_list = ParseInitList();
+      decls.push_back(Decl{false, false, true, id, latter_dims, latter_init_list});
+    } else {
+      decls.push_back(Decl{false, false, false, id, latter_dims, {}});
+    }
+  }
+
+  if (!ExpectChar(';')) {
+    assert(false);
+  }
+  if (is_const) {
+    for (Decl &decl : decls) {
+      decl.is_const = true;
+    }
+  }
+  return decls;
+}
+
+InitList Parser::ParseInitList() {
+  if (!IsTokenChar('{')) {
+    return InitList{ParseExpr(), {}};
+  }
+  NextToken();
+
+  std::vector<InitList> lists;
+  while (!IsTokenChar('}')) {
+    InitList list = ParseInitList();
+    lists.push_back(list);
+
+    if (!IsTokenChar(',')) {
+      break;
+    }
+  }
+
+  if (!ExpectChar('}')) {
+    assert(false);
+  }
+  return InitList{nullptr, lists};
+}
+
 Stmt *Parser::ParseStmt() {
   if (IsTokenChar('{')) {
     return ParseBlock();
@@ -86,7 +246,33 @@ Stmt *Parser::ParseStmt() {
           return new Return{Stmt::Return, nullptr};
         }
       }
+      case Keyword::Const: {
+        NextToken();
+        if (!IsTokenKeyword(Keyword::Int)) {
+          return nullptr;
+        }
+        NextToken();
+        if (!ExpectId()) {
+          return nullptr;
+        }
+        std::string id = lexer_.id_val();
+        NextToken();
+        std::vector<Decl> decls = ParseDecl(true, id);
+        return new DeclStmt{Stmt::DeclStmt, decls};
+      }
+      case Keyword::Int: {
+        NextToken();
+
+        if (!ExpectId()) {
+          return nullptr;
+        }
+        std::string id = lexer_.id_val();
+        NextToken();
+        std::vector<Decl> decls = ParseDecl(false, id);
+        return new DeclStmt{Stmt::DeclStmt, decls};
+      }
       default:
+        std::cerr << static_cast<int>(lexer_.key_val()) << '\n';
         assert(false);
     }
   }
@@ -256,10 +442,8 @@ Expr *Parser::ParseFactor() {
       return new Call{id, args, 0};
     }
 
-    if (IsTokenChar('[')) {
-      auto dims = ParseArrayDims();
-      return new Index{Expr::Index, 0, id, dims};
-    }
+    auto dims = ParseArrayDims();
+    return new Index{Expr::Index, 0, id, dims};
   }
 
   return ParseIntConst();
@@ -305,6 +489,31 @@ std::vector<Expr *> Parser::ParseExprList() {
 std::vector<Expr *> Parser::ParseArrayDims() {
   std::vector<Expr *> dims;
 
+  while (IsTokenChar('[')) {
+    NextToken();
+
+    auto *dim = ParseExpr();
+    if (dim == nullptr) {
+      return {};
+    }
+    dims.push_back(dim);
+
+    if (!IsTokenChar(']')) {
+      std::cerr << "expect ']'\n";
+      return {};
+    }
+    NextToken();
+  }
+  return dims;
+}
+
+std::vector<Expr *> Parser::ParseArrayDims0() {
+  NextToken();
+  if (!ExpectChar(']')) {
+    assert(false);
+  }
+
+  std::vector<Expr *> dims{nullptr};
   while (IsTokenChar('[')) {
     NextToken();
 
