@@ -224,13 +224,13 @@ Stmt* Parser::ParseStmt() {
         if (!ExpectChar(';')) {
           return nullptr;
         }
-        return &Break::INSTANCE;
+        return new Break{Stmt::Break};
       case Keyword::Continue:
         NextToken();
         if (!ExpectChar(';')) {
           return nullptr;
         }
-        return &Continue::INSTANCE;
+        return new Continue{Stmt::Continue};
       case Keyword::Return: {
         NextToken();
         Expr* expr = nullptr;
@@ -413,10 +413,12 @@ Expr* Parser::ParseUnary() {
         return ParseUnary();
       case Operator::Sub:
         NextToken();
-        return new Binary{Expr::Sub, 0, &IntConst::ZERO, ParseUnary()};
+        return new Binary{Expr::Sub, 0, new IntConst{Expr::IntConst, 0, 0},
+                          ParseUnary()};
       case Operator::LogicNot:
         NextToken();
-        return new Binary{Expr::Eq, 0, &IntConst::ZERO, ParseUnary()};
+        return new Binary{Expr::Eq, 0, new IntConst{Expr::IntConst, 0, 0},
+                          ParseUnary()};
       default:
         std::cerr << "expect unary operator\n";
         return nullptr;

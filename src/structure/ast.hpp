@@ -35,29 +35,31 @@ struct Expr {
   i32 result;  // 保存解析出来的结果，typeck阶段计算它，后续用它
 };
 
-// 操作符保存在Expr::tag中
 struct Binary : Expr {
   DEFINE_CLASSOF(Expr, Tag::Add <= p->tag && p->tag <= Tag::Or);
+
   Expr* lhs;
   Expr* rhs;
 };
 
 struct Index : Expr {
   DEFINE_CLASSOF(Expr, p->tag == Tag::Index);
+
   std::string name;
-  // dims为空时即是直接访问普通变量
+
   std::vector<Expr*> dims;
   Decl* lhs_sym;  // typeck前是nullptr，若typeck成功则非空
 };
 
 struct IntConst : Expr {
   DEFINE_CLASSOF(Expr, p->tag == Tag::IntConst);
+
   i32 val;
-  static IntConst ZERO;  // 值为0的IntConst，很多地方会用到，所以做个单例
 };
 
 struct Call : Expr {
   DEFINE_CLASSOF(Expr, p->tag == Tag::Call);
+
   std::string func;
   std::vector<Expr*> args;
   Func* f = nullptr;  // typeck前是nullptr，若typeck成功则非空
@@ -117,6 +119,7 @@ struct Stmt {
 
 struct Assign : Stmt {
   DEFINE_CLASSOF(Stmt, p->tag == Stmt::Assign);
+
   std::string ident;
   std::vector<Expr*> dims;
   Expr* rhs;
@@ -125,21 +128,25 @@ struct Assign : Stmt {
 
 struct ExprStmt : Stmt {
   DEFINE_CLASSOF(Stmt, p->tag == Stmt::ExprStmt);
+
   Expr* val;  // nullable，为空时就是一条分号
 };
 
 struct DeclStmt : Stmt {
   DEFINE_CLASSOF(Stmt, p->tag == Stmt::DeclStmt);
+
   std::vector<Decl> decls;  // 一条语句可以定义多个变量
 };
 
 struct Block : Stmt {
   DEFINE_CLASSOF(Stmt, p->tag == Stmt::Block);
+
   std::vector<Stmt*> stmts;
 };
 
 struct If : Stmt {
   DEFINE_CLASSOF(Stmt, p->tag == Stmt::If);
+
   Expr* cond;
   Stmt* on_true;
   Stmt* on_false;  // nullable
@@ -147,23 +154,22 @@ struct If : Stmt {
 
 struct While : Stmt {
   DEFINE_CLASSOF(Stmt, p->tag == Stmt::While);
+
   Expr* cond;
   Stmt* body;
 };
 
 struct Break : Stmt {
   DEFINE_CLASSOF(Stmt, p->tag == Stmt::Break);
-  // 因为Break和Continue不保存任何信息，用单例来节省一点内存
-  static Break INSTANCE;
 };
 
 struct Continue : Stmt {
   DEFINE_CLASSOF(Stmt, p->tag == Stmt::Continue);
-  static Continue INSTANCE;
 };
 
 struct Return : Stmt {
   DEFINE_CLASSOF(Stmt, p->tag == Stmt::Return);
+
   Expr* val;  // nullable
 };
 
@@ -184,6 +190,24 @@ struct Func {
   // BUILTIN[8]是memset，这个下标在ssa.cpp会用到，修改时需要一并修改
   static Func BUILTIN[9];
 };
+
+inline Func Func::BUILTIN[9] = {
+    Func{true, "getint"},
+    Func{true, "getch"},
+    Func{true, "getarray", {Decl{false, false, false, "a", {nullptr}}}},
+    Func{false, "putint", {Decl{false, false, false, "n"}}},
+    Func{false, "putch", {Decl{false, false, false, "c"}}},
+    Func{false,
+         "putarray",
+         {Decl{false, false, false, "n"},
+          Decl{false, false, false, "a", {nullptr}}}},
+    Func{false, "starttime"},
+    Func{false, "stoptime"},
+    Func{false,
+         "memset",
+         {Decl{false, false, false, "arr", {nullptr}},
+          Decl{false, false, false, "num"},
+          Decl{false, false, false, "count"}}}};
 
 struct Program {
   std::vector<std::variant<Func, Decl>> glob;

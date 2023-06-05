@@ -129,7 +129,7 @@ struct Env {
       ERR("const decl has no initialization");
     } else if (d.is_glob) {
       d.flatten_init.resize(d.dims.empty() ? 1 : d.dims[0]->result,
-                            &IntConst::ZERO);
+                            new IntConst{Expr::IntConst, 0, 0});
     }
   }
 
@@ -222,7 +222,8 @@ struct Env {
         // 遇到了一个新的列表，它必须恰好填充一个元素
         // 给前一个未填满的元素补 0
         if (cnt != 0) {
-          dst.resize(dst.size() + elem_size - cnt, &IntConst::ZERO);
+          dst.resize(dst.size() + elem_size - cnt,
+                     new IntConst{Expr::IntConst, 0, 0});
           cnt = 0;
         }
         if (dims < dims_end) {
@@ -234,7 +235,8 @@ struct Env {
     }
     u32 actual = dst.size() - old_len;
     if (actual <= expect) {
-      dst.resize(dst.size() + expect - actual, &IntConst::ZERO);
+      dst.resize(dst.size() + expect - actual,
+                 new IntConst{Expr::IntConst, 0, 0});
     } else {
       ERR("too many initializing values", expect, actual);
     }

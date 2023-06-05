@@ -86,7 +86,7 @@ void extract_stack_array(IrProgram* p) {
               for (int i = 0; i < size; ++i) {
                 init.push_back(
                     buffer[i] == 0
-                        ? &IntConst::ZERO
+                        ? new IntConst{Expr::IntConst, 0, 0}
                         : new IntConst{Expr::Tag::IntConst, buffer[i]});
               }
               auto name =
