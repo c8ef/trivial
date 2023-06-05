@@ -57,6 +57,7 @@ Program Parser::ParseProgram() {
       NextToken();
     } else if (IsTokenKeyword(Keyword::Void)) {
       type = Keyword::Void;
+      NextToken();
     } else {
       std::cerr << "invalid type\n";
       return {};
