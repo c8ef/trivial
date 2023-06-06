@@ -60,7 +60,7 @@ void Env::CheckDecl(Decl& d) {
   for (auto begin = d.dims.rbegin(), it = begin, end = d.dims.rend(); it < end;
        ++it) {
     Expr* e = *it;
-    if (e) {  // 函数参数中 dims[0] 为 nullptr
+    if (e != nullptr) {  // 函数参数中 dims[0] 为 nullptr
       Eval(e);
       if (e->result < 0) {
         ERR("array dim < 0");
@@ -270,35 +270,34 @@ std::pair<Expr**, Expr**> Env::CheckExpr(Expr* e) {
   }
 }
 
-// 能够成功 Eval 的必然是 int，所以 Eval 中就不必检查操作数的类型
 void Env::Eval(Expr* e) {
-  if (auto x = dyn_cast<Binary>(e)) {
+  if (auto* x = dyn_cast<Binary>(e)) {
     Eval(x->lhs), Eval(x->rhs);
-    x->result = op::Eval((op::Op)x->tag, x->lhs->result, x->rhs->result);
+    x->result =
+        op::Eval(static_cast<op::Op>(x->tag), x->lhs->result, x->rhs->result);
   } else if (isa<Call>(e)) {
-    // 常量表达式中不能包含函数调用
-    ERR("function call in const expression");
-  } else if (auto x = dyn_cast<Index>(e)) {
+    ERROR("const expression disallow function call");
+  } else if (auto* x = dyn_cast<Index>(e)) {
     Decl* d = LookupDecl(x->name);
     if (!d->is_const) {
-      ERR("non-constant variable", x->name, "used in constant expr");
+      ERROR("non const variable {} used in const expression", x->name);
     }
-    // 常量表达式中必须完全解引用数组
     if (d->dims.size() != x->dims.size()) {
-      ERR("index expression array dim mismatch");
+      ERROR("array dimension mismatch");
     }
     u32 off = 0;
     // 因为没有保存每个维度的长度，所以没法在每一个下标处都检查了，不过这也没什么关系
-    for (u32 i = 0, end = x->dims.size(); i < end; ++i) {
+    for (u32 i = 0; i < x->dims.size(); ++i) {
       Expr* idx = x->dims[i];
       Eval(idx);
-      off += (i + 1 == end ? 1 : d->dims[i + 1]->result) * idx->result;
+      off +=
+          (i + 1 == x->dims.size() ? 1 : d->dims[i + 1]->result) * idx->result;
     }
     if (off >= d->FlattenInitList.size()) {
-      ERR("constant index out of range");
+      ERROR("array index out of range");
     }
     x->result = d->FlattenInitList[off]->result;
-  } else if (auto x = dyn_cast<IntConst>(e)) {
+  } else if (auto* x = dyn_cast<IntConst>(e)) {
     x->result = x->val;
   } else {
     UNREACHABLE();
@@ -316,9 +315,8 @@ void TypeCheck(Program& p) {
     } else {
       Decl* d = std::get_if<1>(&g);
       env.CheckDecl(*d);
-      // 变量定义在检查后加入符号表，不允许定义时引用自身
       if (!env.glob.insert({d->name, Symbol::MakeDecl(d)}).second) {
-        ERR("duplicate decl", d->name);
+        ERROR("duplicate global declaration: {}", d->name);
       }
     }
   }

@@ -16,8 +16,15 @@ enum { SystemError = 1, TypeCheckError };
     dbg(__VA_ARGS__);       \
     exit(code);             \
   } while (false)
+
+#define ERROR(...)              \
+  do {                          \
+    spdlog::error(__VA_ARGS__); \
+    exit(1);                    \
+  } while (0)
+
 #define UNREACHABLE() \
-  ERR_EXIT(SystemError, "control flow should never reach here")
+  ERROR("control flow should never reach here: {}:{}", __FILE__, __LINE__)
 
 using i32 = int32_t;
 using u32 = uint32_t;
