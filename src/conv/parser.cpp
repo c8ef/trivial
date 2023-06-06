@@ -1,6 +1,5 @@
 #include "conv/parser.hpp"
 
-#include <cassert>
 #include <stack>
 
 const int kOpPrecTable[] = {MIMIC_OPERATORS(MIMIC_EXPAND_THIRD)};
@@ -36,7 +35,7 @@ inline Expr::Tag GetBinaryOp(Operator op) {
     case Operator::LogicOr:
       return Expr::Or;
     default:
-      assert(false);
+      spdlog::error("Parser error: invalid binary operator");
       return Expr::Add;
   }
 }
@@ -63,9 +62,7 @@ Program Parser::ParseProgram() {
       return {};
     }
 
-    if (!ExpectId()) {
-      return {};
-    }
+    if (!ExpectId()) return {};
 
     std::string id = lexer_.IdVal();
     NextToken();
@@ -94,36 +91,33 @@ Func Parser::ParseFunction(Keyword ret_type, const std::string& id) {
       Decl param = ParseParam();
       params.push_back(param);
 
-      if (!IsTokenChar(',')) {
-        break;
-      }
+      if (!IsTokenChar(',')) break;
+
       NextToken();
     }
   }
-  if (!ExpectChar(')')) {
-    assert(false);
-  }
+  if (!ExpectChar(')')) return {};
 
   Stmt* block = ParseBlock();
   if (block == nullptr) {
-    assert(false);
+    spdlog::error("Parser error: expect function block");
+    return {};
   }
 
-  if (ret_type == Keyword::Int) {
+  if (ret_type == Keyword::Int)
     return Func{true, id, params, *reinterpret_cast<Block*>(block)};
-  }
+
   return Func{false, id, params, *reinterpret_cast<Block*>(block)};
 }
 
 Decl Parser::ParseParam() {
   if (!IsTokenKeyword(Keyword::Int)) {
-    assert(false);
+    spdlog::error("Parser error: param type name can only be int");
+    return {};
   }
   NextToken();
 
-  if (!ExpectId()) {
-    assert(false);
-  }
+  if (!ExpectId()) return {};
 
   std::string id = lexer_.IdVal();
   NextToken();
@@ -150,11 +144,9 @@ std::vector<Decl> Parser::ParseDecl(bool is_const,
   }
 
   while (!IsTokenChar(';')) {
-    NextToken();  // eat ','
+    NextToken();
 
-    if (!ExpectId()) {
-      return {};
-    }
+    if (!ExpectId()) return {};
 
     std::string id = lexer_.IdVal();
     NextToken();
@@ -170,9 +162,8 @@ std::vector<Decl> Parser::ParseDecl(bool is_const,
     }
   }
 
-  if (!ExpectChar(';')) {
-    assert(false);
-  }
+  if (!ExpectChar(';')) return {};
+
   if (is_const) {
     for (Decl& decl : decls) {
       decl.is_const = true;
@@ -182,9 +173,8 @@ std::vector<Decl> Parser::ParseDecl(bool is_const,
 }
 
 InitList Parser::ParseInitList() {
-  if (!IsTokenChar('{')) {
-    return InitList{ParseExpr(), {}};
-  }
+  if (!IsTokenChar('{')) return InitList{ParseExpr(), {}};
+
   NextToken();
 
   std::vector<InitList> lists;
@@ -192,26 +182,20 @@ InitList Parser::ParseInitList() {
     InitList list = ParseInitList();
     lists.push_back(list);
 
-    if (!IsTokenChar(',')) {
-      break;
-    }
+    if (!IsTokenChar(',')) break;
+
     NextToken();
   }
 
-  if (!ExpectChar('}')) {
-    assert(false);
-  }
+  if (!ExpectChar('}')) return {};
+
   return InitList{nullptr, lists};
 }
 
 Stmt* Parser::ParseStmt() {
-  if (IsTokenChar('{')) {
-    return ParseBlock();
-  }
+  if (IsTokenChar('{')) return ParseBlock();
 
-  if (IsTokenChar(';')) {
-    return ParseEmptyStmt();
-  }
+  if (IsTokenChar(';')) return ParseEmptyStmt();
 
   if (cur_token_ == Token::Keyword) {
     switch (lexer_.KeyVal()) {
@@ -250,13 +234,11 @@ Stmt* Parser::ParseStmt() {
       }
       case Keyword::Const: {
         NextToken();
-        if (!IsTokenKeyword(Keyword::Int)) {
-          return nullptr;
-        }
+        if (!IsTokenKeyword(Keyword::Int)) return nullptr;
+
         NextToken();
-        if (!ExpectId()) {
-          return nullptr;
-        }
+        if (!ExpectId()) return nullptr;
+
         std::string id = lexer_.IdVal();
         NextToken();
         std::vector<Decl> decls = ParseDecl(true, id);
@@ -265,9 +247,8 @@ Stmt* Parser::ParseStmt() {
       case Keyword::Int: {
         NextToken();
 
-        if (!ExpectId()) {
-          return nullptr;
-        }
+        if (!ExpectId()) return nullptr;
+
         std::string id = lexer_.IdVal();
         NextToken();
         std::vector<Decl> decls = ParseDecl(false, id);
@@ -306,16 +287,13 @@ Stmt* Parser::ParseBare() {
 }
 
 Stmt* Parser::ParseBlock() {
-  if (!ExpectChar('{')) {
-    return nullptr;
-  }
+  if (!ExpectChar('{')) return nullptr;
 
   std::vector<Stmt*> stmts;
   while (!IsTokenChar('}')) {
     auto* stmt = ParseStmt();
-    if (stmt == nullptr) {
-      return nullptr;
-    }
+    if (stmt == nullptr) return nullptr;
+
     stmts.push_back(stmt);
   }
 
@@ -360,16 +338,12 @@ Expr* Parser::ParseExpr() {
   std::stack<Operator> ops;
 
   auto* expr = ParseUnary();
-  if (expr == nullptr) {
-    return nullptr;
-  }
+  if (expr == nullptr) return nullptr;
 
   oprs.push(expr);
   while (cur_token_ == Token::Operator) {
     auto op = lexer_.OpVal();
-    if (GetOpPrec(op) <= 0) {
-      break;
-    }
+    if (GetOpPrec(op) <= 0) break;
 
     NextToken();
     while (!ops.empty() && GetOpPrec(ops.top()) >= GetOpPrec(op)) {
@@ -465,20 +439,14 @@ std::vector<Expr*> Parser::ParseExprList() {
   if (!IsTokenChar(')')) {
     for (;;) {
       auto* arg = ParseExpr();
-      if (arg == nullptr) {
-        return {};
-      }
+      if (arg == nullptr) return {};
       args.push_back(arg);
-
-      if (!IsTokenChar(',')) {
-        break;
-      }
+      if (!IsTokenChar(',')) break;
       NextToken();
     }
   }
 
   if (!ExpectChar(')')) return {};
-
   return args;
 }
 
@@ -489,9 +457,7 @@ std::vector<Expr*> Parser::ParseArrayDims() {
     NextToken();
 
     auto* dim = ParseExpr();
-    if (dim == nullptr) {
-      return {};
-    }
+    if (dim == nullptr) return {};
     dims.push_back(dim);
 
     if (!ExpectChar(']')) {
@@ -503,23 +469,16 @@ std::vector<Expr*> Parser::ParseArrayDims() {
 
 std::vector<Expr*> Parser::ParseArrayDims0() {
   NextToken();
-  if (!ExpectChar(']')) {
-    return {};
-  }
+  if (!ExpectChar(']')) return {};
 
   std::vector<Expr*> dims{nullptr};
   while (IsTokenChar('[')) {
     NextToken();
 
     auto* dim = ParseExpr();
-    if (dim == nullptr) {
-      return {};
-    }
+    if (dim == nullptr) return {};
     dims.push_back(dim);
-
-    if (!ExpectChar(']')) {
-      return {};
-    }
+    if (!ExpectChar(']')) return {};
   }
   return dims;
 }
