@@ -65,7 +65,7 @@ void extract_stack_array(IrProgram* p) {
                   // can only be memset, and will only appear once
                   if (arg.value == alloc) {
                     assert(memset == nullptr &&
-                           call->func == Func::BUILTIN[8].val);
+                           call->func == Func::builtin_function[8].val);
                     memset = call;
                   } else if (auto p = dyn_cast<GetElementPtrInst>(arg.value);
                              p && alias(alloc->sym, p->lhs_sym)) {
@@ -86,10 +86,10 @@ void extract_stack_array(IrProgram* p) {
               for (int i = 0; i < size; ++i) {
                 init.push_back(
                     buffer[i] == 0
-                        ? new IntConst{Expr::IntConst, 0, 0}
-                        : new IntConst{Expr::Tag::IntConst, buffer[i]});
+                        ? new IntConst{{Expr::IntConst, 0}, 0}
+                        : new IntConst{{Expr::Tag::IntConst, buffer[i]}});
               }
-              auto name =
+              auto* name =
                   new std::string("__extracted_" + std::string(f->func->name) +
                                   "_" + std::string(alloc->sym->name) + "_" +
                                   std::to_string(sym_counter++));

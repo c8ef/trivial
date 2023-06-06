@@ -307,7 +307,7 @@ void Env::Eval(Expr* e) {
 
 void TypeCheck(Program& p) {
   Env env;
-  for (Func& f : Func::BUILTIN) {
+  for (Func& f : Func::builtin_function) {
     env.CheckFunc(&f);
   }
   for (auto& g : p.glob) {

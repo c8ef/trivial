@@ -187,11 +187,11 @@ struct Func {
   // ast->ir阶段赋值
   IrFunc* val;
 
-  // BUILTIN[8]是memset，这个下标在ssa.cpp会用到，修改时需要一并修改
-  static Func BUILTIN[9];
+  // builtin_function[8]是memset，这个下标在ssa.cpp会用到，修改时需要一并修改
+  static Func builtin_function[9];
 };
 
-inline Func Func::BUILTIN[9] = {
+inline Func Func::builtin_function[9] = {
     Func{true, "getint"},
     Func{true, "getch"},
     Func{true, "getarray", {Decl{false, false, false, "a", {nullptr}}}},
