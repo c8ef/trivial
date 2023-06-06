@@ -151,7 +151,7 @@ void loop_unroll(IrFunc* f) {
               if (auto i0c = dyn_cast<ConstValue>(i0),
                   nc = dyn_cast<ConstValue>(n);
                   i0c && nc &&
-                  op::eval((op::Op)cond->tag, cond_ix == 0 ? i0c->imm : nc->imm,
+                  op::Eval((op::Op)cond->tag, cond_ix == 0 ? i0c->imm : nc->imm,
                            cond_ix == 0 ? nc->imm : i0c->imm)) {
                 cond0_i0 = cond_ix;
                 cond0 = new BinaryInst(cond->tag, cond_ix == 0 ? i0c : nc,
@@ -212,7 +212,7 @@ void loop_unroll(IrFunc* f) {
           times = (end - beg) / step;  // 这不是精确的次数，可能会差一次
       if (times <= 0 || times > 32) goto normal_unroll;
       beg += step;
-      while (op::eval((op::Op)cond->tag, cond_ix == 0 ? beg : end,
+      while (op::Eval((op::Op)cond->tag, cond_ix == 0 ? beg : end,
                       cond_ix == 0 ? end : beg)) {
         for (Inst* i = first_non_phi;; i = i->next) {
           clone_inst(i, bb_body, map);

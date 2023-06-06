@@ -63,7 +63,6 @@ Program Parser::ParseProgram() {
     }
 
     if (!ExpectId()) return {};
-
     std::string id = lexer_.IdVal();
     NextToken();
 
@@ -90,9 +89,7 @@ Func Parser::ParseFunction(Keyword ret_type, const std::string& id) {
     for (;;) {
       Decl param = ParseParam();
       params.push_back(param);
-
       if (!IsTokenChar(',')) break;
-
       NextToken();
     }
   }
@@ -106,7 +103,6 @@ Func Parser::ParseFunction(Keyword ret_type, const std::string& id) {
 
   if (ret_type == Keyword::Int)
     return Func{true, id, params, *reinterpret_cast<Block*>(block)};
-
   return Func{false, id, params, *reinterpret_cast<Block*>(block)};
 }
 
@@ -118,7 +114,6 @@ Decl Parser::ParseParam() {
   NextToken();
 
   if (!ExpectId()) return {};
-
   std::string id = lexer_.IdVal();
   NextToken();
 
@@ -147,7 +142,6 @@ std::vector<Decl> Parser::ParseDecl(bool is_const,
     NextToken();
 
     if (!ExpectId()) return {};
-
     std::string id = lexer_.IdVal();
     NextToken();
 
@@ -163,7 +157,6 @@ std::vector<Decl> Parser::ParseDecl(bool is_const,
   }
 
   if (!ExpectChar(';')) return {};
-
   if (is_const) {
     for (Decl& decl : decls) {
       decl.is_const = true;
@@ -181,20 +174,16 @@ InitList Parser::ParseInitList() {
   while (!IsTokenChar('}')) {
     InitList list = ParseInitList();
     lists.push_back(list);
-
     if (!IsTokenChar(',')) break;
-
     NextToken();
   }
 
   if (!ExpectChar('}')) return {};
-
   return InitList{nullptr, lists};
 }
 
 Stmt* Parser::ParseStmt() {
   if (IsTokenChar('{')) return ParseBlock();
-
   if (IsTokenChar(';')) return ParseEmptyStmt();
 
   if (cur_token_ == Token::Keyword) {
@@ -246,9 +235,7 @@ Stmt* Parser::ParseStmt() {
       }
       case Keyword::Int: {
         NextToken();
-
         if (!ExpectId()) return nullptr;
-
         std::string id = lexer_.IdVal();
         NextToken();
         std::vector<Decl> decls = ParseDecl(false, id);
@@ -293,7 +280,6 @@ Stmt* Parser::ParseBlock() {
   while (!IsTokenChar('}')) {
     auto* stmt = ParseStmt();
     if (stmt == nullptr) return nullptr;
-
     stmts.push_back(stmt);
   }
 
@@ -310,7 +296,6 @@ Stmt* Parser::ParseIfElse() {
 
   auto* then = ParseStmt();
   if (then == nullptr) return nullptr;
-
   Stmt* else_then = nullptr;
   if (IsTokenKeyword(Keyword::Else)) {
     NextToken();
@@ -424,7 +409,6 @@ Expr* Parser::ParseIntConst() {
   Expr* expr = nullptr;
   if (cur_token_ == Token::Int) {
     expr = new IntConst{{Expr::IntConst, 0}, static_cast<i32>(lexer_.IntVal())};
-
     NextToken();
     return expr;
   }
@@ -460,9 +444,7 @@ std::vector<Expr*> Parser::ParseArrayDims() {
     if (dim == nullptr) return {};
     dims.push_back(dim);
 
-    if (!ExpectChar(']')) {
-      return {};
-    }
+    if (!ExpectChar(']')) return {};
   }
   return dims;
 }

@@ -293,7 +293,7 @@ again:
         // for most instructions reach here, rhs is IMM
         if (l && r) {
           // both constant, evaluate and eliminate
-          replace(x, ConstValue::get(op::eval((op::Op)x->tag, l->imm, r->imm)));
+          replace(x, ConstValue::get(op::Eval((op::Op)x->tag, l->imm, r->imm)));
         } else {
           try_fold_lhs(x);
           if (auto value = x->optimizedValue()) {
@@ -332,7 +332,7 @@ again:
           }
           if (replaced)
             replace(x,
-                    ConstValue::get(x->lhs_sym->flatten_init[offset]->result));
+                    ConstValue::get(x->lhs_sym->FlattenInitList[offset]->result));
         }
         if (!replaced) replace(i, vn_of(vn, i));
       } else if (isa<GetElementPtrInst>(i) || is_pure_call(i)) {

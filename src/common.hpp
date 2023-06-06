@@ -9,7 +9,7 @@
 #define DBG_MACRO_NO_WARNING
 #include "thirdparty/dbg.h"
 
-enum { kSystemError = 1, kParsingError, kTypeCheckError, kCodeGenError };
+enum { SystemError = 1, TypeCheckError };
 
 #define ERR_EXIT(code, ...) \
   do {                      \
@@ -17,7 +17,7 @@ enum { kSystemError = 1, kParsingError, kTypeCheckError, kCodeGenError };
     exit(code);             \
   } while (false)
 #define UNREACHABLE() \
-  ERR_EXIT(kSystemError, "control flow should never reach here")
+  ERR_EXIT(SystemError, "control flow should never reach here")
 
 using i32 = int32_t;
 using u32 = uint32_t;

@@ -92,7 +92,7 @@ struct Decl {
   InitList
       init;  // 配合has_init，逻辑上相当于std::optional<InitList>，但是stl这一套实在是不好用
   std::vector<Expr*>
-      flatten_init;  // parse完后为空，typeck阶段填充，是完全展开+补0后的init
+      FlattenInitList;  // parse完后为空，typeck阶段填充，是完全展开+补0后的init
 
   // ast->ir阶段赋值，每个Decl拥有属于自己的Value，Value
   // *的地址相等等价于指向同一个的变量
@@ -177,7 +177,7 @@ struct IrFunc;
 
 struct Func {
   // return type can only be void or int
-  bool is_int;
+  bool IsInt;
   std::string name;
   // 只是用Decl来复用一下代码，其实不能算是Decl，is_const / is_glob /
   // has_init总是false

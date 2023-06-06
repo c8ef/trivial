@@ -80,20 +80,20 @@ void print_dims(std::ostream& os, Expr** dims, Expr** dims_end) {
 }
 
 void print_flatten_init(std::ostream& os, Expr** dims, Expr** dims_end,
-                        Expr** flatten_init, Expr** flatten_init_end) {
+                        Expr** FlattenInitList, Expr** flatten_init_end) {
   if (dims == dims_end) {
     // last dim
-    os << flatten_init[0]->result;
+    os << FlattenInitList[0]->result;
   } else {
     // one or more dims
     os << "[";
-    while (flatten_init != flatten_init_end) {
+    while (FlattenInitList != flatten_init_end) {
       os << "i32 ";
-      os << flatten_init[0]->result;
-      if (flatten_init + 1 != flatten_init_end) {
+      os << FlattenInitList[0]->result;
+      if (FlattenInitList + 1 != flatten_init_end) {
         os << ", ";
       }
-      flatten_init++;
+      FlattenInitList++;
     }
     os << "]";
   }
@@ -134,8 +134,8 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
     print_dims(os, d->dims.data(), d->dims.data() + d->dims.size());
     if (d->has_init) {
       print_flatten_init(os, d->dims.data(), d->dims.data() + d->dims.size(),
-                         d->flatten_init.data(),
-                         d->flatten_init.data() + d->flatten_init.size());
+                         d->FlattenInitList.data(),
+                         d->FlattenInitList.data() + d->FlattenInitList.size());
     } else {
       // default 0 initialized
       os << "zeroinitializer" << endl;
@@ -145,7 +145,7 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
 
   for (auto f = p.func.head; f != nullptr; f = f->next) {
     const char* decl = f->builtin ? "declare" : "define";
-    const char* ret = f->func->is_int ? "i32" : "void";
+    const char* ret = f->func->IsInt ? "i32" : "void";
     os << decl << " " << ret << " @";
     os << f->func->name << "(";
     for (auto& p : f->func->params) {
@@ -309,7 +309,7 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
           }
         } else if (auto x = dyn_cast<CallInst>(inst)) {
           Func* callee = x->func->func;
-          if (callee->is_int) {
+          if (callee->IsInt) {
             os << pv(v_index, inst) << " = call i32";
           } else {
             os << "call void";

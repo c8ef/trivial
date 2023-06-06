@@ -145,7 +145,7 @@ void inline_func(IrProgram* p) {
       BasicBlock* entry = bb_map.find(callee->bb.head)->second;
       new JumpInst(entry, bb);
       entry->pred.push_back(bb);
-      if (callee->func->is_int) {
+      if (callee->func->IsInt) {
         auto phi = new PhiInst(ret);
         assert(phi->incoming_values.size() == ret_map.size());
         for (u32 j = 0, sz = phi->incoming_values.size(); j < sz; ++j) {

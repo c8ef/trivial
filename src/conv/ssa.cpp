@@ -145,13 +145,13 @@ void convert_stmt(SsaContext* ctx, Stmt* stmt) {
           auto init = convert_expr(ctx, decl.init.val1);
           new StoreInst(&decl, inst, init, ConstValue::get(0), ctx->bb);
         } else {
-          // assign each element of flatten_init
+          // assign each element of FlattenInitList
           // heuristic: count how many elements are zero
           int num_zeros = 0;
           std::vector<Value*> values;
-          values.reserve(decl.flatten_init.size());
-          for (u32 i = 0; i < decl.flatten_init.size(); i++) {
-            auto init = convert_expr(ctx, decl.flatten_init[i]);
+          values.reserve(decl.FlattenInitList.size());
+          for (u32 i = 0; i < decl.FlattenInitList.size(); i++) {
+            auto init = convert_expr(ctx, decl.FlattenInitList[i]);
             values.push_back(init);
             if (auto x = dyn_cast<ConstValue>(init)) {
               if (x->imm == 0) {
@@ -174,7 +174,7 @@ void convert_stmt(SsaContext* ctx, Stmt* stmt) {
                 ConstValue::get(decl.dims[0]->result * 4), call_inst);
           }
 
-          for (u32 i = 0; i < decl.flatten_init.size(); i++) {
+          for (u32 i = 0; i < decl.FlattenInitList.size(); i++) {
             // skip safely
             if (auto x = dyn_cast<ConstValue>(values[i])) {
               if (emit_memset && x->imm == 0) {
@@ -361,7 +361,7 @@ IrProgram* convert_ssa(Program& p) {
 
       // add extra return statement to avoid undefined behavior
       if (!ctx.bb->valid()) {
-        if (func->func->is_int) {
+        if (func->func->IsInt) {
           new ReturnInst(ConstValue::get(0), ctx.bb);
         } else {
           new ReturnInst(nullptr, ctx.bb);

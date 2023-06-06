@@ -588,7 +588,7 @@ MachineProgram* machine_code_generation(IrProgram* p) {
           }
 
           // return
-          if (x->func->func->is_int) {
+          if (x->func->func->IsInt) {
             // has return
             // move r0 to dst
             auto dst = resolve(inst, mbb);
