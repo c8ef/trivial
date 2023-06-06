@@ -1,4 +1,4 @@
-#include "ir.hpp"
+#include "structure/ir.hpp"
 
 #include <unordered_map>
 
@@ -186,7 +186,8 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
     }
     os << "\tbr label %_0" << endl;
 
-    // bb 的标号没有必要用 IndexMapper，而且 IndexMapper 的编号是先到先得，这看着并不是很舒服
+    // bb 的标号没有必要用 IndexMapper，而且 IndexMapper
+    // 的编号是先到先得，这看着并不是很舒服
     std::map<BasicBlock*, u32> bb_index;
     IndexMapper<Value> v_index;
     for (auto bb = f->bb.head; bb; bb = bb->next) {
