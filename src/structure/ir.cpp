@@ -145,7 +145,7 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
 
   for (auto f = p.func.head; f != nullptr; f = f->next) {
     const char* decl = f->builtin ? "declare" : "define";
-    const char* ret = f->func->IsInt ? "i32" : "void";
+    const char* ret = f->func->is_int ? "i32" : "void";
     os << decl << " " << ret << " @";
     os << f->func->name << "(";
     for (auto& p : f->func->params) {
@@ -310,7 +310,7 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
           }
         } else if (auto x = dyn_cast<CallInst>(inst)) {
           Func* callee = x->func->func;
-          if (callee->IsInt) {
+          if (callee->is_int) {
             os << pv(v_index, inst) << " = call i32";
           } else {
             os << "call void";

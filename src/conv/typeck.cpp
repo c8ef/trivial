@@ -15,11 +15,11 @@ Func* Env::LookupFunc(std::string name) {
       return f;
     }
   }
-  ERR("no such func", name);
+  ERROR("no such function: {}", name);
 }
 
 Decl* Env::LookupDecl(std::string name) {
-  for (auto it = local_stk.rbegin(), end = local_stk.rend(); it < end; ++it) {
+  for (auto it = local_stk.rbegin(); it < local_stk.rend(); ++it) {
     auto res = it->find(name);
     if (res != it->end()) {
       return res->second;
@@ -31,19 +31,19 @@ Decl* Env::LookupDecl(std::string name) {
       return d;
     }
   }
-  ERR("no such variable", name);
+  ERROR("no such variable: {}", name);
 }
 
 void Env::CheckFunc(Func* f) {
   cur_func = f;
   if (!glob.insert({f->name, Symbol::MakeFunc(f)}).second) {
-    ERR("duplicate function", f->name);
+    ERROR("duplicate function: {}", f->name);
   }
   local_stk.emplace_back();  // 参数作用域就是第一层局部变量的作用域
   for (Decl& d : f->params) {
     CheckDecl(d);
     if (!local_stk[0].insert({d.name, &d}).second) {
-      ERR("duplicate param decl", d.name);
+      ERROR("duplicate parameter: {}", d.name);
     }
   }
   for (Stmt* s : f->body.stmts) {
@@ -57,41 +57,43 @@ void Env::CheckFunc(Func* f) {
 // 这时是空的
 void Env::CheckDecl(Decl& d) {
   // 每个维度保存的 result 是包括它在内右边所有维度的乘积
-  for (auto begin = d.dims.rbegin(), it = begin, end = d.dims.rend(); it < end;
-       ++it) {
+  for (auto it = d.dims.rbegin(); it < d.dims.rend(); ++it) {
     Expr* e = *it;
-    if (e != nullptr) {  // 函数参数中 dims[0] 为 nullptr
+    // in function parameter the first array dimension can be empty
+    if (e != nullptr) {
       Eval(e);
       if (e->result < 0) {
-        ERR("array dim < 0");
+        ERROR("array dimension cannot less than 0");
       }
-      // NOTE_OPT: this optimization will introduce MUL instructions
+      // ref:
+      // https://stackoverflow.com/questions/11868087/avoiding-powers-of-2-for-cache-friendliness
       if (e->result >= 256 && (e->result & (e->result - 1)) == 0) {
-        auto extend_dim = "Extending dim from " + std::to_string(e->result) +
-                          " to " + std::to_string(e->result + 10);
-        dbg(extend_dim);
-        e->result += 10;  // avoid cache missing
+        spdlog::debug("extend dimension from {} to {}", e->result,
+                      e->result + 10);
+        e->result += 10;
       }
-      if (it != begin) {
+      if (it != d.dims.rbegin()) {
         e->result *= it[-1]->result;
       }
     }
   }
   if (d.has_init) {
-    if (d.dims.empty() && d.init.val1) {  // 形如 int x = 1
+    if (d.dims.empty() && (d.init.val1 != nullptr)) {
+      // like `int x = 1`
       CheckExpr(d.init.val1);
       if (d.is_const || d.is_glob) {
         Eval(d.init.val1);
       }
       d.FlattenInitList.push_back(d.init.val1);
-    } else if (!d.init.val1) {  // 形如 int x[1] = {}
+    } else if (d.init.val1 == nullptr) {
+      // like `int x[2] = {1， 2}`
       FlattenInitList(d.init.val2, d.dims.data(), d.dims.data() + d.dims.size(),
                       d.is_const | d.is_glob, d.FlattenInitList);
-    } else {  // 另外两种搭配
-      ERR("incompatible type and initialization");
+    } else {
+      ERROR("incompatible initialization");
     }
   } else if (d.is_const) {
-    ERR("const decl has no initialization");
+    ERROR("const declaration must have initialization");
   } else if (d.is_glob) {
     d.FlattenInitList.resize(d.dims.empty() ? 1 : d.dims[0]->result,
                              new IntConst{{Expr::IntConst, 0}, 0});
@@ -99,24 +101,24 @@ void Env::CheckDecl(Decl& d) {
 }
 
 void Env::CheckStmt(Stmt* s) {
-  if (auto x = dyn_cast<Assign>(s)) {
+  if (auto* x = dyn_cast<Assign>(s)) {
     Decl* d = LookupDecl(x->ident);
     x->lhs_sym = d;
     if (d->is_const) {
-      ERR("can't assign to const decl");
+      ERROR("cannot assign to const variable");
     }
     for (Expr* e : x->dims) {
       if (!IsInt(CheckExpr(e))) {
-        ERR("index operator expect int operand");
+        ERROR("integer operator expect integer operand");
       }
     }
     if (!(IsInt(CheckExpr(x->rhs)) && d->dims.size() == x->dims.size())) {
       ERR("can only assign int to int");
     }
-  } else if (auto x = dyn_cast<ExprStmt>(s)) {
+  } else if (auto* x = dyn_cast<ExprStmt>(s)) {
     // 不要检查分号
     if (x->val) CheckExpr(x->val);
-  } else if (auto x = dyn_cast<DeclStmt>(s)) {
+  } else if (auto* x = dyn_cast<DeclStmt>(s)) {
     auto& top = local_stk.back();
     for (Decl& d : x->decls) {
       CheckDecl(d);
@@ -124,21 +126,21 @@ void Env::CheckStmt(Stmt* s) {
         ERR("duplicate local decl", d.name);
       }
     }
-  } else if (auto x = dyn_cast<Block>(s)) {
+  } else if (auto* x = dyn_cast<Block>(s)) {
     local_stk.emplace_back();
     for (Stmt* s : x->stmts) {
       CheckStmt(s);
     }
     local_stk.pop_back();
-  } else if (auto x = dyn_cast<If>(s)) {
+  } else if (auto* x = dyn_cast<If>(s)) {
     if (!IsInt(CheckExpr(x->cond))) {
       ERR("cond isn't int type");
     }
     CheckStmt(x->on_true);
-    if (x->on_false) {
+    if (x->on_false != nullptr) {
       CheckStmt(x->on_false);
     }
-  } else if (auto x = dyn_cast<While>(s)) {
+  } else if (auto* x = dyn_cast<While>(s)) {
     if (!IsInt(CheckExpr(x->cond))) {
       ERR("cond isn't int type");
     }
@@ -146,17 +148,18 @@ void Env::CheckStmt(Stmt* s) {
     CheckStmt(x->body);
     --loop_cnt;
   } else if (isa<Break>(s)) {
-    if (!loop_cnt) {
-      ERR("break out of loop");
+    if (loop_cnt == 0U) {
+      ERROR("break statement outside loop");
     }
   } else if (isa<Continue>(s)) {
-    if (!loop_cnt) {
-      ERR("continue out of loop");
+    if (loop_cnt == 0U) {
+      ERROR("continue statement outside loop");
     }
-  } else if (auto x = dyn_cast<Return>(s)) {
-    auto t = x->val ? CheckExpr(x->val) : std::pair<Expr**, Expr**>{};
-    if (!((cur_func->IsInt && IsInt(t)) || (!cur_func->IsInt && !t.first))) {
-      ERR("return type mismatch");
+  } else if (auto* x = dyn_cast<Return>(s)) {
+    auto t =
+        x->val != nullptr ? CheckExpr(x->val) : std::pair<Expr**, Expr**>{};
+    if (!((cur_func->is_int && IsInt(t)) || (!cur_func->is_int && !t.first))) {
+      ERROR("return type mismatch");
     }
   } else {
     UNREACHABLE();
@@ -209,32 +212,35 @@ void Env::FlattenInitList(std::vector<InitList>& src, Expr** dims,
 
 // 配合 CheckExpr 使用
 bool Env::IsInt(std::pair<Expr**, Expr**> t) {
-  return t.first && t.first == t.second;
+  return (t.first != nullptr) && t.first == t.second;
 }
 
 // 返回 Option<&[Expr *]>：
 // 类型是 int 时返回空 slice，类型是 void 时返回 None，类型是
 // int[]...时返回对应维度的 slice
 std::pair<Expr**, Expr**> Env::CheckExpr(Expr* e) {
-  const std::pair<Expr**, Expr**> none{},
-      empty{reinterpret_cast<Expr**>(8), reinterpret_cast<Expr**>(8)};
-  if (auto x = dyn_cast<Binary>(e)) {
-    auto l = CheckExpr(x->lhs), r = CheckExpr(x->rhs);
-    if (!IsInt(l) && !IsInt(r)) {
-      ERR("binary operator expect int operands");
-    }
+  const std::pair<Expr**, Expr**> none{};
+  const std::pair<Expr**, Expr**> empty{reinterpret_cast<Expr**>(8),
+                                        reinterpret_cast<Expr**>(8)};
+  if (auto* x = dyn_cast<Binary>(e)) {
+    auto l = CheckExpr(x->lhs);
+    auto r = CheckExpr(x->rhs);
+    if (!IsInt(l) && !IsInt(r)) ERROR("binary operator expect integer operand");
+
     return empty;
-  } else if (auto x = dyn_cast<Call>(e)) {
+  }
+  if (auto* x = dyn_cast<Call>(e)) {
     Func* f = LookupFunc(x->func);
     x->f = f;
-    if (f->params.size() != x->args.size()) {
-      ERR("function call argc mismatch");
-    }
+    if (f->params.size() != x->args.size())
+      ERROR("function call argument count mismatch");
+
     for (u32 i = 0; i < x->args.size(); ++i) {
       auto a = CheckExpr(x->args[i]);
       std::vector<Expr*>& p = f->params[i].dims;
       // 跳过第一个维度的检查，因为函数参数的第一个维度为空
-      bool ok = a.first && (size_t)(a.second - a.first) == p.size();
+      bool ok = (a.first != nullptr) &&
+                static_cast<size_t>(a.second - a.first) == p.size();
       for (u32 j = 1, end = p.size(); ok && j < end; ++j) {
         if (a.first[j]->result != p[j]->result) {
           ok = false;
@@ -244,8 +250,9 @@ std::pair<Expr**, Expr**> Env::CheckExpr(Expr* e) {
         ERR("function call arg mismatch", f->name, i + 1, f->params[i].name);
       }
     }
-    return f->IsInt ? empty : none;
-  } else if (auto x = dyn_cast<Index>(e)) {
+    return f->is_int ? empty : none;
+  }
+  if (auto* x = dyn_cast<Index>(e)) {
     // 这里允许不完全解引用数组
     Decl* d = LookupDecl(x->name);
     x->lhs_sym = d;
@@ -254,7 +261,7 @@ std::pair<Expr**, Expr**> Env::CheckExpr(Expr* e) {
     }
     for (Expr* e : x->dims) {
       if (!IsInt(CheckExpr(e))) {
-        ERR("index operator expect int operand");
+        ERROR("integer operator expect integer operand");
       }
     }
     // 这里逻辑上总是返回：后面的，但是 stl 的实现中空 vector 的指针可能是
@@ -262,12 +269,12 @@ std::pair<Expr**, Expr**> Env::CheckExpr(Expr* e) {
     return d->dims.empty() ? empty
                            : std::pair{d->dims.data() + x->dims.size(),
                                        d->dims.data() + d->dims.size()};
-  } else if (auto x = dyn_cast<IntConst>(e)) {
+  }
+  if (auto* x = dyn_cast<IntConst>(e)) {
     e->result = x->val;
     return empty;
-  } else {
-    UNREACHABLE();
   }
+  UNREACHABLE();
 }
 
 void Env::Eval(Expr* e) {

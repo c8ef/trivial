@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string_view>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -32,7 +33,7 @@ struct Expr {
     Index,
     IntConst
   } tag;
-  i32 result;  // 保存解析出来的结果，typeck阶段计算它，后续用它
+  i32 result;  // store the calculated result during type check
 };
 
 struct Binary : Expr {
@@ -66,13 +67,13 @@ struct Call : Expr {
 
   // do some simple preprocess in constructor
   explicit Call(std::string_view func, std::vector<Expr*> args)
-      : Expr{Tag::Call, 0}, func(func), args(args) {}
+      : Expr{Tag::Call, 0}, func(func), args(std::move(args)) {}
 };
 
 struct InitList {
-  // val1为nullptr时val2有效，逻辑上相当于std::variant<Expr *,
-  // std::vector<InitList>>，但是stl这一套实在是不好用
-  Expr* val1;  // nullable
+  // when val1 == nullptr, val2 is valid
+  // when val2 is empty, val1 = ParseExpr()
+  Expr* val1;
   std::vector<InitList> val2;
 };
 
@@ -177,7 +178,7 @@ struct IrFunc;
 
 struct Func {
   // return type can only be void or int
-  bool IsInt;
+  bool is_int;
   std::string name;
   // 只是用Decl来复用一下代码，其实不能算是Decl，is_const / is_glob /
   // has_init总是false

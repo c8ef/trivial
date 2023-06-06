@@ -288,7 +288,8 @@ MachineProgram* machine_code_generation(IrProgram* p) {
 
           auto lhs = resolve_no_imm(x->lhs.value, mbb);
           // Optimization 2:
-          // 提前检查两个特殊情况：除常数和乘 2^n，里面用 continue 来跳过后续的操作
+          // 提前检查两个特殊情况：除常数和乘 2^n，里面用 continue
+          // 来跳过后续的操作
           if (rhs_const) {
             if (x->tag == Value::Tag::Div && imm > 0) {
               auto dst = resolve(inst, mbb);
@@ -458,7 +459,9 @@ MachineProgram* machine_code_generation(IrProgram* p) {
             }
             opposite = opposite_cond(cond);
 
-            // 一条 BinaryInst 后紧接着 BranchInst，而且前者的结果仅被后者使用，那么就可以不用计算结果，而是直接用 bxx 的指令
+            // 一条 BinaryInst 后紧接着
+            // BranchInst，而且前者的结果仅被后者使用，那么就可以不用计算结果，而是直接用
+            // bxx 的指令
             if (x->uses.head == x->uses.tail && x->uses.head &&
                 isa<BranchInst>(x->uses.head->user) &&
                 x->next == x->uses.head->user) {
@@ -588,7 +591,7 @@ MachineProgram* machine_code_generation(IrProgram* p) {
           }
 
           // return
-          if (x->func->func->IsInt) {
+          if (x->func->func->is_int) {
             // has return
             // move r0 to dst
             auto dst = resolve(inst, mbb);

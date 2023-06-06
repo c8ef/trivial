@@ -132,7 +132,7 @@ Token Lexer::HandleBlockComment() {
   NextChar();
   // read until there is '*/' in stream
   bool star = false;
-  while (!IsEOF() && (!star || last_char_ != '/')) {
+  while (!IsEOF() && !(star && last_char_ == '/')) {
     star = last_char_ == '*';
     NextChar();
   }

@@ -362,7 +362,7 @@ IrProgram* convert_ssa(Program& p) {
 
       // add extra return statement to avoid undefined behavior
       if (!ctx.bb->valid()) {
-        if (func->func->IsInt) {
+        if (func->func->is_int) {
           new ReturnInst(ConstValue::get(0), ctx.bb);
         } else {
           new ReturnInst(nullptr, ctx.bb);
