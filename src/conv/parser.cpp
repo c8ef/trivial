@@ -59,7 +59,7 @@ Program Parser::ParseProgram() {
       type = Keyword::Void;
       NextToken();
     } else {
-      std::cerr << "invalid type\n";
+      spdlog::error("Parser error: invalid type");
       return {};
     }
 
@@ -85,7 +85,7 @@ Program Parser::ParseProgram() {
   return program;
 }
 
-Func Parser::ParseFunction(Keyword ret_type, std::string id) {
+Func Parser::ParseFunction(Keyword ret_type, const std::string& id) {
   NextToken();
   std::vector<Decl> params;
 
@@ -105,15 +105,14 @@ Func Parser::ParseFunction(Keyword ret_type, std::string id) {
   }
 
   Stmt* block = ParseBlock();
-  if (!block) {
+  if (block == nullptr) {
     assert(false);
   }
 
   if (ret_type == Keyword::Int) {
-    return Func{true, id, params, *((Block*)block)};
-  } else {
-    return Func{false, id, params, *((Block*)block)};
+    return Func{true, id, params, *reinterpret_cast<Block*>(block)};
   }
+  return Func{false, id, params, *reinterpret_cast<Block*>(block)};
 }
 
 Decl Parser::ParseParam() {
@@ -132,12 +131,13 @@ Decl Parser::ParseParam() {
   std::vector<Expr*> dims;
   if (IsTokenChar('[')) {
     dims = ParseArrayDims0();
-    return Decl{false, false, false, id, dims, nullptr};
+    return Decl{false, false, false, id, dims, {nullptr}};
   }
-  return Decl{false, false, false, id, {}, nullptr};
+  return Decl{false, false, false, id, {}, {nullptr}};
 }
 
-std::vector<Decl> Parser::ParseDecl(bool is_const, std::string first_id) {
+std::vector<Decl> Parser::ParseDecl(bool is_const,
+                                    const std::string& first_id) {
   std::vector<Decl> decls;
   // now cur token pass the first id
   auto first_dims = ParseArrayDims();
@@ -236,18 +236,17 @@ Stmt* Parser::ParseStmt() {
         Expr* expr = nullptr;
         if (!IsTokenChar(';')) {
           expr = ParseExpr();
-          if (!expr) {
+          if (expr == nullptr) {
             return nullptr;
           }
         }
         if (!ExpectChar(';')) {
           return nullptr;
         }
-        if (expr) {
-          return new Return{Stmt::Return, expr};
-        } else {
-          return new Return{Stmt::Return, nullptr};
+        if (expr != nullptr) {
+          return new Return{{Stmt::Return}, expr};
         }
+        return new Return{{Stmt::Return}, nullptr};
       }
       case Keyword::Const: {
         NextToken();
@@ -261,7 +260,7 @@ Stmt* Parser::ParseStmt() {
         std::string id = lexer_.IdVal();
         NextToken();
         std::vector<Decl> decls = ParseDecl(true, id);
-        return new DeclStmt{Stmt::DeclStmt, decls};
+        return new DeclStmt{{Stmt::DeclStmt}, decls};
       }
       case Keyword::Int: {
         NextToken();
@@ -272,11 +271,10 @@ Stmt* Parser::ParseStmt() {
         std::string id = lexer_.IdVal();
         NextToken();
         std::vector<Decl> decls = ParseDecl(false, id);
-        return new DeclStmt{Stmt::DeclStmt, decls};
+        return new DeclStmt{{Stmt::DeclStmt}, decls};
       }
       default:
-        std::cerr << static_cast<int>(lexer_.KeyVal()) << '\n';
-        assert(false);
+        spdlog::error("Parser error: invalid keyword");
     }
   }
 
@@ -285,7 +283,7 @@ Stmt* Parser::ParseStmt() {
 
 Stmt* Parser::ParseEmptyStmt() {
   NextToken();
-  return new ExprStmt{Stmt::ExprStmt, nullptr};
+  return new ExprStmt{{Stmt::ExprStmt}, nullptr};
 }
 
 Stmt* Parser::ParseBare() {
@@ -296,13 +294,15 @@ Stmt* Parser::ParseBare() {
     if (rhs == nullptr) return nullptr;
     if (!ExpectChar(';')) return nullptr;
 
-    return new Assign{Stmt::Assign, ((Index*)expr)->name, ((Index*)expr)->dims,
+    return new Assign{{Stmt::Assign},
+                      (reinterpret_cast<Index*>(expr))->name,
+                      (reinterpret_cast<Index*>(expr))->dims,
                       rhs};
   }
   if (expr == nullptr) return nullptr;
   if (!ExpectChar(';')) return nullptr;
 
-  return new ExprStmt{Stmt::ExprStmt, expr};
+  return new ExprStmt{{Stmt::ExprStmt}, expr};
 }
 
 Stmt* Parser::ParseBlock() {
@@ -313,46 +313,46 @@ Stmt* Parser::ParseBlock() {
   std::vector<Stmt*> stmts;
   while (!IsTokenChar('}')) {
     auto* stmt = ParseStmt();
-    if (!stmt) {
+    if (stmt == nullptr) {
       return nullptr;
     }
     stmts.push_back(stmt);
   }
 
   NextToken();
-  return new Block{Stmt::Block, stmts};
+  return new Block{{Stmt::Block}, stmts};
 }
 
 Stmt* Parser::ParseIfElse() {
   NextToken();
 
   if (!ExpectChar('(')) return nullptr;
-  auto cond = ParseExpr();
+  auto* cond = ParseExpr();
   if (!ExpectChar(')')) return nullptr;
 
-  auto then = ParseStmt();
-  if (!then) return nullptr;
+  auto* then = ParseStmt();
+  if (then == nullptr) return nullptr;
 
   Stmt* else_then = nullptr;
   if (IsTokenKeyword(Keyword::Else)) {
     NextToken();
     else_then = ParseStmt();
-    if (!else_then) return nullptr;
+    if (else_then == nullptr) return nullptr;
   }
-  return new If{Stmt::If, cond, then, else_then};
+  return new If{{Stmt::If}, cond, then, else_then};
 }
 
 Stmt* Parser::ParseWhile() {
   NextToken();
 
   if (!ExpectChar('(')) return nullptr;
-  auto cond = ParseExpr();
+  auto* cond = ParseExpr();
   if (!ExpectChar(')')) return nullptr;
 
-  auto body = ParseStmt();
-  if (!body) return nullptr;
+  auto* body = ParseStmt();
+  if (body == nullptr) return nullptr;
 
-  return new While{Stmt::While, cond, body};
+  return new While{{Stmt::While}, cond, body};
 }
 
 Expr* Parser::ParseExpr() {
@@ -375,26 +375,26 @@ Expr* Parser::ParseExpr() {
     while (!ops.empty() && GetOpPrec(ops.top()) >= GetOpPrec(op)) {
       auto cur_op = GetBinaryOp(ops.top());
       ops.pop();
-      auto rhs = oprs.top();
+      auto* rhs = oprs.top();
       oprs.pop();
-      auto lhs = oprs.top();
+      auto* lhs = oprs.top();
       oprs.pop();
-      oprs.push(new Binary{cur_op, 0, lhs, rhs});
+      oprs.push(new Binary{{cur_op, 0}, lhs, rhs});
     }
     ops.push(op);
     expr = ParseUnary();
-    if (!expr) return nullptr;
+    if (expr == nullptr) return nullptr;
     oprs.push(expr);
   }
 
   while (!ops.empty()) {
     auto cur_op = GetBinaryOp(ops.top());
     ops.pop();
-    auto rhs = oprs.top();
+    auto* rhs = oprs.top();
     oprs.pop();
-    auto lhs = oprs.top();
+    auto* lhs = oprs.top();
     oprs.pop();
-    oprs.push(new Binary{cur_op, 0, lhs, rhs});
+    oprs.push(new Binary{{cur_op, 0}, lhs, rhs});
   }
   return oprs.top();
 }
@@ -407,14 +407,14 @@ Expr* Parser::ParseUnary() {
         return ParseUnary();
       case Operator::Sub:
         NextToken();
-        return new Binary{Expr::Sub, 0, new IntConst{Expr::IntConst, 0, 0},
-                          ParseUnary()};
+        return new Binary{
+            {Expr::Sub, 0}, new IntConst{{Expr::IntConst, 0}, 0}, ParseUnary()};
       case Operator::LogicNot:
         NextToken();
-        return new Binary{Expr::Eq, 0, new IntConst{Expr::IntConst, 0, 0},
-                          ParseUnary()};
+        return new Binary{
+            {Expr::Eq, 0}, new IntConst{{Expr::IntConst, 0}, 0}, ParseUnary()};
       default:
-        std::cerr << "expect unary operator\n";
+        spdlog::error("Parser error: expect unary operator");
         return nullptr;
     }
   }
@@ -440,7 +440,7 @@ Expr* Parser::ParseFactor() {
     }
 
     auto dims = ParseArrayDims();
-    return new Index{Expr::Index, 0, id, dims};
+    return new Index{{Expr::Index, 0}, id, dims};
   }
 
   return ParseIntConst();
@@ -449,13 +449,13 @@ Expr* Parser::ParseFactor() {
 Expr* Parser::ParseIntConst() {
   Expr* expr = nullptr;
   if (cur_token_ == Token::Int) {
-    expr = new IntConst{Expr::IntConst, 0, static_cast<i32>(lexer_.IntVal())};
+    expr = new IntConst{{Expr::IntConst, 0}, static_cast<i32>(lexer_.IntVal())};
 
     NextToken();
     return expr;
   }
-  std::cerr << "expect integer constant\n";
-  assert(false);
+  spdlog::error("Parser error: expect integer constant");
+  return nullptr;
 }
 
 std::vector<Expr*> Parser::ParseExprList() {
@@ -504,7 +504,7 @@ std::vector<Expr*> Parser::ParseArrayDims() {
 std::vector<Expr*> Parser::ParseArrayDims0() {
   NextToken();
   if (!ExpectChar(']')) {
-    assert(false);
+    return {};
   }
 
   std::vector<Expr*> dims{nullptr};
@@ -517,20 +517,16 @@ std::vector<Expr*> Parser::ParseArrayDims0() {
     }
     dims.push_back(dim);
 
-    if (!IsTokenChar(']')) {
-      std::cerr << "expect ']'\n";
+    if (!ExpectChar(']')) {
       return {};
     }
-    NextToken();
   }
   return dims;
 }
 
 bool Parser::ExpectChar(char c) {
   if (!IsTokenChar(c)) {
-    std::string msg = "expected '";
-    msg = msg + c + "'";
-    std::cerr << msg << '\n';
+    spdlog::error("Parser error: expected '{}'", c);
     return false;
   }
   NextToken();
@@ -539,7 +535,7 @@ bool Parser::ExpectChar(char c) {
 
 bool Parser::ExpectId() {
   if (cur_token_ != Token::Id) {
-    std::cerr << "expected identifier\n";
+    spdlog::error("Parser error: expected identifier");
     return false;
   }
   return true;

@@ -10,23 +10,18 @@
 
 class Parser {
  public:
-  Parser(Lexer& lexer) : lexer_(lexer) { Reset(); }
+  explicit Parser(Lexer& lexer) : lexer_(lexer) { Reset(); }
 
   // reset parser status
   void Reset() {
     lexer_.Reset();
-    ended_ = false;
     NextToken();
   }
 
-  // getters
-  // returns true if parser met EOF
-  bool ended() const { return ended_; }
-
   Program ParseProgram();
-  Func ParseFunction(Keyword ret_type, std::string id);
+  Func ParseFunction(Keyword ret_type, const std::string& id);
   Decl ParseParam();
-  std::vector<Decl> ParseDecl(bool is_const, std::string first_id);
+  std::vector<Decl> ParseDecl(bool is_const, const std::string& first_id);
   InitList ParseInitList();
 
   Stmt* ParseStmt();
@@ -53,19 +48,19 @@ class Parser {
   }
 
   // check if current token is a character (token type 'Other')
-  bool IsTokenChar(char c) const {
+  [[nodiscard]] bool IsTokenChar(char c) const {
     return (cur_token_ == Token::Other && lexer_.OtherVal() == c) ||
            (cur_token_ == Token::Id && lexer_.IdVal().size() == 1 &&
             lexer_.IdVal()[0] == c);
   }
 
   // check if current token is a keyword
-  bool IsTokenKeyword(Keyword key) const {
+  [[nodiscard]] bool IsTokenKeyword(Keyword key) const {
     return cur_token_ == Token::Keyword && lexer_.KeyVal() == key;
   }
 
   // check if current token is an operator
-  bool IsTokenOperator(Operator op) const {
+  [[nodiscard]] bool IsTokenOperator(Operator op) const {
     return cur_token_ == Token::Operator && lexer_.OpVal() == op;
   }
 
@@ -76,5 +71,4 @@ class Parser {
 
   Lexer& lexer_;
   Token cur_token_;
-  bool ended_;
 };
