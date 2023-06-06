@@ -67,7 +67,7 @@ Program Parser::ParseProgram() {
       return {};
     }
 
-    std::string id = lexer_.id_val();
+    std::string id = lexer_.IdVal();
     NextToken();
 
     if (IsTokenChar('(')) {
@@ -126,7 +126,7 @@ Decl Parser::ParseParam() {
     assert(false);
   }
 
-  std::string id = lexer_.id_val();
+  std::string id = lexer_.IdVal();
   NextToken();
 
   std::vector<Expr*> dims;
@@ -156,7 +156,7 @@ std::vector<Decl> Parser::ParseDecl(bool is_const, std::string first_id) {
       return {};
     }
 
-    std::string id = lexer_.id_val();
+    std::string id = lexer_.IdVal();
     NextToken();
 
     auto latter_dims = ParseArrayDims();
@@ -214,7 +214,7 @@ Stmt* Parser::ParseStmt() {
   }
 
   if (cur_token_ == Token::Keyword) {
-    switch (lexer_.key_val()) {
+    switch (lexer_.KeyVal()) {
       case Keyword::If:
         return ParseIfElse();
       case Keyword::While:
@@ -258,7 +258,7 @@ Stmt* Parser::ParseStmt() {
         if (!ExpectId()) {
           return nullptr;
         }
-        std::string id = lexer_.id_val();
+        std::string id = lexer_.IdVal();
         NextToken();
         std::vector<Decl> decls = ParseDecl(true, id);
         return new DeclStmt{Stmt::DeclStmt, decls};
@@ -269,13 +269,13 @@ Stmt* Parser::ParseStmt() {
         if (!ExpectId()) {
           return nullptr;
         }
-        std::string id = lexer_.id_val();
+        std::string id = lexer_.IdVal();
         NextToken();
         std::vector<Decl> decls = ParseDecl(false, id);
         return new DeclStmt{Stmt::DeclStmt, decls};
       }
       default:
-        std::cerr << static_cast<int>(lexer_.key_val()) << '\n';
+        std::cerr << static_cast<int>(lexer_.KeyVal()) << '\n';
         assert(false);
     }
   }
@@ -366,7 +366,7 @@ Expr* Parser::ParseExpr() {
 
   oprs.push(expr);
   while (cur_token_ == Token::Operator) {
-    auto op = lexer_.op_val();
+    auto op = lexer_.OpVal();
     if (GetOpPrec(op) <= 0) {
       break;
     }
@@ -401,7 +401,7 @@ Expr* Parser::ParseExpr() {
 
 Expr* Parser::ParseUnary() {
   if (cur_token_ == Token::Operator) {
-    switch (lexer_.op_val()) {
+    switch (lexer_.OpVal()) {
       case Operator::Add:
         NextToken();
         return ParseUnary();
@@ -431,7 +431,7 @@ Expr* Parser::ParseFactor() {
   }
 
   if (cur_token_ == Token::Id) {
-    std::string id = lexer_.id_val();
+    std::string id = lexer_.IdVal();
     NextToken();
 
     if (IsTokenChar('(')) {
@@ -449,7 +449,7 @@ Expr* Parser::ParseFactor() {
 Expr* Parser::ParseIntConst() {
   Expr* expr = nullptr;
   if (cur_token_ == Token::Int) {
-    expr = new IntConst{Expr::IntConst, 0, static_cast<i32>(lexer_.int_val())};
+    expr = new IntConst{Expr::IntConst, 0, static_cast<i32>(lexer_.IntVal())};
 
     NextToken();
     return expr;

@@ -27,15 +27,15 @@ class Lexer {
   void DumpTokens();
 
   // identifiers
-  const std::string& id_val() const { return id_val_; }
+  [[nodiscard]] const std::string& IdVal() const { return id_val_; }
   // integer values
-  std::int64_t int_val() const { return int_val_; }
+  [[nodiscard]] std::int64_t IntVal() const { return int_val_; }
   // keywords
-  Keyword key_val() const { return key_val_; }
+  [[nodiscard]] Keyword KeyVal() const { return key_val_; }
   // operators
-  Operator op_val() const { return op_val_; }
+  [[nodiscard]] Operator OpVal() const { return op_val_; }
   // other characters
-  char other_val() const { return other_val_; }
+  [[nodiscard]] char OtherVal() const { return other_val_; }
 
  private:
   bool IsEOF() { return (in_ == nullptr) || in_->eof(); }
@@ -46,7 +46,7 @@ class Lexer {
   }
 
   // print error message and return Token::Error
-  Token LogError(std::string_view message);
+  static Token LogError(std::string_view message);
 
   // skip spaces in stream
   void SkipSpaces();

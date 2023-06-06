@@ -54,19 +54,19 @@ class Parser {
 
   // check if current token is a character (token type 'Other')
   bool IsTokenChar(char c) const {
-    return (cur_token_ == Token::Other && lexer_.other_val() == c) ||
-           (cur_token_ == Token::Id && lexer_.id_val().size() == 1 &&
-            lexer_.id_val()[0] == c);
+    return (cur_token_ == Token::Other && lexer_.OtherVal() == c) ||
+           (cur_token_ == Token::Id && lexer_.IdVal().size() == 1 &&
+            lexer_.IdVal()[0] == c);
   }
 
   // check if current token is a keyword
   bool IsTokenKeyword(Keyword key) const {
-    return cur_token_ == Token::Keyword && lexer_.key_val() == key;
+    return cur_token_ == Token::Keyword && lexer_.KeyVal() == key;
   }
 
   // check if current token is an operator
   bool IsTokenOperator(Operator op) const {
-    return cur_token_ == Token::Operator && lexer_.op_val() == op;
+    return cur_token_ == Token::Operator && lexer_.OpVal() == op;
   }
 
   // make sure current token is specific character and goto next token
