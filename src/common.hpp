@@ -26,8 +26,12 @@ enum { SystemError = 1, TypeCheckError };
 #define UNREACHABLE() \
   ERROR("control flow should never reach here: {}:{}", __FILE__, __LINE__)
 
+// NOLINTBEGIN
 using i32 = int32_t;
 using u32 = uint32_t;
+using i64 = int64_t;
+using u64 = uint64_t;
+// NOLINTEND
 
 #define DEFINE_CLASSOF(cls, cond) \
   static bool classof(const cls* p) { return cond; }

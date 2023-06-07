@@ -96,7 +96,7 @@ Func Parser::ParseFunction(Keyword ret_type, const std::string& id) {
   if (!ExpectChar(')')) return {};
 
   Stmt* block = ParseBlock();
-  if (block == nullptr) {
+  if (!block) {
     spdlog::error("Parser error: expect function block");
     return {};
   }
@@ -209,14 +209,14 @@ Stmt* Parser::ParseStmt() {
         Expr* expr = nullptr;
         if (!IsTokenChar(';')) {
           expr = ParseExpr();
-          if (expr == nullptr) {
+          if (!expr) {
             return nullptr;
           }
         }
         if (!ExpectChar(';')) {
           return nullptr;
         }
-        if (expr != nullptr) {
+        if (expr) {
           return new Return{{Stmt::Return}, expr};
         }
         return new Return{{Stmt::Return}, nullptr};
@@ -259,7 +259,7 @@ Stmt* Parser::ParseBare() {
   if (expr->tag == Expr::Index && IsTokenOperator(Operator::Assign)) {
     NextToken();
     auto* rhs = ParseExpr();
-    if (rhs == nullptr) return nullptr;
+    if (!rhs) return nullptr;
     if (!ExpectChar(';')) return nullptr;
 
     return new Assign{{Stmt::Assign},
@@ -267,7 +267,7 @@ Stmt* Parser::ParseBare() {
                       (reinterpret_cast<Index*>(expr))->dims,
                       rhs};
   }
-  if (expr == nullptr) return nullptr;
+  if (!expr) return nullptr;
   if (!ExpectChar(';')) return nullptr;
 
   return new ExprStmt{{Stmt::ExprStmt}, expr};
@@ -279,7 +279,7 @@ Stmt* Parser::ParseBlock() {
   std::vector<Stmt*> stmts;
   while (!IsTokenChar('}')) {
     auto* stmt = ParseStmt();
-    if (stmt == nullptr) return nullptr;
+    if (!stmt) return nullptr;
     stmts.push_back(stmt);
   }
 
@@ -295,7 +295,7 @@ Stmt* Parser::ParseIfElse() {
   if (!ExpectChar(')')) return nullptr;
 
   auto* then = ParseStmt();
-  if (then == nullptr) return nullptr;
+  if (!then) return nullptr;
   Stmt* else_then = nullptr;
   if (IsTokenKeyword(Keyword::Else)) {
     NextToken();
@@ -313,7 +313,7 @@ Stmt* Parser::ParseWhile() {
   if (!ExpectChar(')')) return nullptr;
 
   auto* body = ParseStmt();
-  if (body == nullptr) return nullptr;
+  if (!body) return nullptr;
 
   return new While{{Stmt::While}, cond, body};
 }
@@ -323,7 +323,7 @@ Expr* Parser::ParseExpr() {
   std::stack<Operator> ops;
 
   auto* expr = ParseUnary();
-  if (expr == nullptr) return nullptr;
+  if (!expr) return nullptr;
 
   oprs.push(expr);
   while (cur_token_ == Token::Operator) {
@@ -342,7 +342,7 @@ Expr* Parser::ParseExpr() {
     }
     ops.push(op);
     expr = ParseUnary();
-    if (expr == nullptr) return nullptr;
+    if (!expr) return nullptr;
     oprs.push(expr);
   }
 
@@ -423,7 +423,7 @@ std::vector<Expr*> Parser::ParseExprList() {
   if (!IsTokenChar(')')) {
     for (;;) {
       auto* arg = ParseExpr();
-      if (arg == nullptr) return {};
+      if (!arg) return {};
       args.push_back(arg);
       if (!IsTokenChar(',')) break;
       NextToken();
@@ -441,7 +441,7 @@ std::vector<Expr*> Parser::ParseArrayDims() {
     NextToken();
 
     auto* dim = ParseExpr();
-    if (dim == nullptr) return {};
+    if (!dim) return {};
     dims.push_back(dim);
 
     if (!ExpectChar(']')) return {};
@@ -458,7 +458,7 @@ std::vector<Expr*> Parser::ParseArrayDims0() {
     NextToken();
 
     auto* dim = ParseExpr();
-    if (dim == nullptr) return {};
+    if (!dim) return {};
     dims.push_back(dim);
     if (!ExpectChar(']')) return {};
   }

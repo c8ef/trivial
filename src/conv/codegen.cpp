@@ -5,9 +5,10 @@
 #include <map>
 #include <optional>
 
+#include "common.hpp"
+
 // list of assignments (lhs, rhs)
 using ParMv = std::vector<std::pair<MachineOperand, MachineOperand>>;
-using u64 = uint64_t;
 
 static inline void insert_parallel_mv(ParMv& movs, MachineInst* insertBefore) {
   // serialization in any order is okay
