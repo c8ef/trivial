@@ -4,6 +4,45 @@
 
 #include "structure/ast.hpp"
 
+bool Inst::has_side_effect() {
+  if (isa<BranchInst>(this) || isa<JumpInst>(this) || isa<ReturnInst>(this) ||
+      isa<StoreInst>(this))
+    return true;
+  if (auto x = dyn_cast<CallInst>(this); x && x->func->has_side_effect)
+    return true;
+  return false;
+}
+
+std::array<BasicBlock*, 2> BasicBlock::succ() {
+  Inst* end = insts.tail;  // 必须非空
+  if (auto x = dyn_cast<BranchInst>(end))
+    return {x->left, x->right};
+  else if (auto x = dyn_cast<JumpInst>(end))
+    return {x->next, nullptr};
+  else if (isa<ReturnInst>(end))
+    return {nullptr, nullptr};
+  else
+    UNREACHABLE();
+}
+
+std::array<BasicBlock**, 2> BasicBlock::succ_ref() {
+  Inst* end = insts.tail;
+  if (auto x = dyn_cast<BranchInst>(end))
+    return {&x->left, &x->right};
+  else if (auto x = dyn_cast<JumpInst>(end))
+    return {&x->next, nullptr};
+  else if (isa<ReturnInst>(end))
+    return {nullptr, nullptr};
+  else
+    UNREACHABLE();
+}
+
+bool BasicBlock::valid() {
+  Inst* end = insts.tail;
+  return end &&
+         (isa<BranchInst>(end) || isa<JumpInst>(end) || isa<ReturnInst>(end));
+}
+
 void Value::deleteValue() {
   if (auto x = dyn_cast<BinaryInst>(this))
     delete x;

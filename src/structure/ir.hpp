@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <map>
 #include <set>
-#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -13,8 +12,6 @@
 #include "casting.hpp"
 #include "common.hpp"
 
-// 声明ast中用到的类型，从而让这里不需要include
-// "ast.hpp"。真正需要访问字段的文件里自己include
 struct Func;
 struct Decl;
 
@@ -46,25 +43,29 @@ struct Value {
     // Binary Operator End
     Branch,
     Jump,
-    Return,  // Control flow
+    Return,
+    // Control flow
     GetElementPtr,
     Load,
-    Store,  // Memory
+    Store,
+    // Memory
     Call,
     Alloca,
     Phi,
     MemOp,
-    MemPhi,  // 虚拟的MemPhi指令，保证不出现在指令序列中，只出现在BasicBlock::mem_phis中
+    MemPhi,
+    // 虚拟的MemPhi指令，保证不出现在指令序列中，只出现在BasicBlock::mem_phis中
     Const,
     Global,
     Param,
-    Undef,  // Const ~ Undef: Reference
+    Undef,
+    // Const ~ Undef: Reference
   } tag;
 
-  Value(Tag tag) : tag(tag) {}
+  explicit Value(Tag tag) : tag(tag) {}
 
-  void addUse(Use* u) { uses.InsertAtEnd(u); }
-  void killUse(Use* u) { uses.Remove(u); }
+  void AddUse(Use* u) { uses.InsertAtEnd(u); }
+  void KillUse(Use* u) { uses.Remove(u); }
 
   // 将对自身所有的使用替换成对v的使用
   inline void replaceAllUseWith(Value* v);
@@ -82,13 +83,13 @@ struct Use {
   // 因为prev和next永远不会从一个Use开始被主动使用，而是在遍历Use链表的时候用到
   // 而既然这个Use已经被加入了一个链表，它的prev和next也就已经被赋值了
   Use(Value* v, Inst* u) : value(v), user(u) {
-    if (v) v->addUse(this);
+    if (v) v->AddUse(this);
   }
 
   // 没有必要定义移动构造函数/拷贝运算符，语义没有区别
   // 一般不会用到它们，只在类似vector内部构造临时变量又析构的场景中用到
   Use(const Use& rhs) : value(rhs.value), user(rhs.user) {
-    if (value) value->addUse(this);
+    if (value) value->AddUse(this);
   }
   Use& operator=(const Use& rhs) {
     if (this != &rhs) {
@@ -100,13 +101,13 @@ struct Use {
 
   // 注意不要写.value = xxx, 而是用.set(xxx), 因为需要记录被use的关系
   void set(Value* v) {
-    if (value) value->killUse(this);
+    if (value) value->KillUse(this);
     value = v;
-    if (v) v->addUse(this);
+    if (v) v->AddUse(this);
   }
 
   ~Use() {
-    if (value) value->killUse(this);
+    if (value) value->KillUse(this);
   }
 };
 
@@ -124,23 +125,25 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& dt);
 
 struct BasicBlock {
   DEFINE_LIST(BasicBlock)
+
   std::vector<BasicBlock*> pred;
   BasicBlock* idom;
   std::unordered_set<BasicBlock*> dom_by;  // 支配它的节点集
   std::vector<BasicBlock*> doms;           // 它支配的节点集
   u32 dom_level;                           // dom树中的深度，根深度为0
-  bool
-      vis;  // 各种算法中用到，标记是否访问过，算法开头应把所有vis置false(调用IrFunc::clear_all_vis)
+  // 各种算法中用到，标记是否访问过，算法开头应把所有vis置false(调用IrFunc::clear_all_vis)
+  bool vis;
   IntrusiveList<Inst> insts;
   IntrusiveList<Inst> mem_phis;  // 元素都是MemPhiInst
 
-  inline std::array<BasicBlock*, 2> succ();
-  inline std::array<BasicBlock**, 2> succ_ref();  // 想修改succ时使用
-  inline bool valid();
+  std::array<BasicBlock*, 2> succ();
+  std::array<BasicBlock**, 2> succ_ref();  // 想修改succ时使用
+  bool valid();
 };
 
 struct IrFunc {
   DEFINE_LIST(IrFunc)
+
   Func* func;
   IntrusiveList<BasicBlock> bb;
   // functions called by this function
@@ -226,7 +229,7 @@ struct Inst : Value {
   // 返回的指针对是一个左闭右开区间，表示这条指令的所有操作数，.value可能为空
   std::pair<Use*, Use*> operands();
 
-  inline bool has_side_effect();
+  bool has_side_effect();
 };
 
 struct BinaryInst : Inst {
@@ -279,10 +282,10 @@ struct BinaryInst : Inst {
         // Use是被pin在内存中的，不能直接swap它们。如果未来希望这样做，需要实现配套的设施，基本上就是把下面的逻辑在构造函数/拷贝运算符中实现
         tag = after;
         Value *l = lhs.value, *r = rhs.value;
-        l->killUse(&lhs);
-        r->killUse(&rhs);
-        l->addUse(&rhs);
-        r->addUse(&lhs);
+        l->KillUse(&lhs);
+        r->KillUse(&rhs);
+        l->AddUse(&rhs);
+        r->AddUse(&lhs);
         std::swap(lhs.value, rhs.value);
         return true;
       }
@@ -463,42 +466,3 @@ struct MemPhiInst : Inst {
     }
   }
 };
-
-bool Inst::has_side_effect() {
-  if (isa<BranchInst>(this) || isa<JumpInst>(this) || isa<ReturnInst>(this) ||
-      isa<StoreInst>(this))
-    return true;
-  if (auto x = dyn_cast<CallInst>(this); x && x->func->has_side_effect)
-    return true;
-  return false;
-}
-
-std::array<BasicBlock*, 2> BasicBlock::succ() {
-  Inst* end = insts.tail;  // 必须非空
-  if (auto x = dyn_cast<BranchInst>(end))
-    return {x->left, x->right};
-  else if (auto x = dyn_cast<JumpInst>(end))
-    return {x->next, nullptr};
-  else if (isa<ReturnInst>(end))
-    return {nullptr, nullptr};
-  else
-    UNREACHABLE();
-}
-
-std::array<BasicBlock**, 2> BasicBlock::succ_ref() {
-  Inst* end = insts.tail;
-  if (auto x = dyn_cast<BranchInst>(end))
-    return {&x->left, &x->right};
-  else if (auto x = dyn_cast<JumpInst>(end))
-    return {&x->next, nullptr};
-  else if (isa<ReturnInst>(end))
-    return {nullptr, nullptr};
-  else
-    UNREACHABLE();
-}
-
-bool BasicBlock::valid() {
-  Inst* end = insts.tail;
-  return end &&
-         (isa<BranchInst>(end) || isa<JumpInst>(end) || isa<ReturnInst>(end));
-}
