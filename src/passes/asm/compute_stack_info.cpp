@@ -4,7 +4,7 @@
 
 void compute_stack_info(MachineFunc* f) {
   for (auto bb = f->bb.head; bb; bb = bb->next) {
-    for (auto inst = bb->insts.head; inst; inst = inst->next) {
+    for (auto inst = bb->instructions.head; inst; inst = inst->next) {
       auto def = std::get<0>(get_def_use(inst));
       for (const auto& reg : def) {
         if ((i32)ArmReg::r4 <= reg.value && reg.value <= (i32)ArmReg::r11) {

@@ -16,7 +16,7 @@ void mem2reg(IrFunc* f) {
       alloca_ids;  // 把 alloca 映射到整数，后面有好几个 vector 用这个做下标
   std::vector<Value*> allocas;
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
-    for (Inst* i = bb->insts.head; i; i = i->next) {
+    for (Inst* i = bb->instructions.head; i; i = i->next) {
       if (auto a = dyn_cast<AllocaInst>(i)) {
         if (a->sym->dims.empty()) {  // 局部 int 变量
           alloca_ids.insert({a, (u32)alloca_ids.size()});
@@ -27,7 +27,7 @@ void mem2reg(IrFunc* f) {
   }
   std::vector<std::vector<BasicBlock*>> alloca_defs(alloca_ids.size());
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
-    for (Inst* i = bb->insts.head; i; i = i->next) {
+    for (Inst* i = bb->instructions.head; i; i = i->next) {
       if (auto x = dyn_cast<StoreInst>(i)) {
         auto it =
             alloca_ids.find(x->arr.value);  // store 的目标是我们考虑的地址
@@ -70,12 +70,12 @@ void mem2reg(IrFunc* f) {
     worklist2.pop_back();
     if (!bb->vis) {
       bb->vis = true;
-      for (Inst* i = bb->insts.head; i;) {
+      for (Inst* i = bb->instructions.head; i;) {
         Inst* next = i->next;
         // 如果一个 value 在 alloca_ids 中，它的实际类型必然是
         // AllocaInst，无需再做 dyn_cast
         if (auto it = alloca_ids.find(i); it != alloca_ids.end()) {
-          bb->insts.Remove(i);
+          bb->instructions.Remove(i);
           delete static_cast<AllocaInst*>(i);
         } else if (auto x = dyn_cast<LoadInst>(i)) {
           // 这里不能，也不用再看 x->arr.value 是不是 AllocaInst 了
@@ -84,7 +84,7 @@ void mem2reg(IrFunc* f) {
           auto it = alloca_ids.find(x->arr.value);
           if (it != alloca_ids.end()) {
             x->ReplaceAllUseWith(values[it->second]);
-            bb->insts.Remove(x);
+            bb->instructions.Remove(x);
             x->arr.value =
                 nullptr;  // 它用到被 delete 的 AllocaInst，已经不能再访问了
             delete x;  // 跟 i->DeleteValue() 作用是一样的 (但是跟 delete
@@ -94,7 +94,7 @@ void mem2reg(IrFunc* f) {
           auto it = alloca_ids.find(x->arr.value);
           if (it != alloca_ids.end()) {
             values[it->second] = x->data.value;
-            bb->insts.Remove(x);
+            bb->instructions.Remove(x);
             x->arr.value = nullptr;
             delete x;
           }
@@ -110,7 +110,7 @@ void mem2reg(IrFunc* f) {
       for (BasicBlock* x : bb->Succ()) {
         if (x) {
           worklist2.emplace_back(x, values);
-          for (Inst* i = x->insts.head; i; i = i->next) {
+          for (Inst* i = x->instructions.head; i; i = i->next) {
             if (auto p = dyn_cast<PhiInst>(i)) {
               auto it = phis.find(p);
               if (it != phis.end()) {

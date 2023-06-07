@@ -4,7 +4,7 @@
 
 void dead_store_elim(IrFunc* f) {
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
-    for (Inst* i = bb->insts.head; i;) {
+    for (Inst* i = bb->instructions.head; i;) {
       Inst* next = i->next;
       if (auto x = dyn_cast<StoreInst>(i)) {
         Decl* arr = x->lhs_sym;
@@ -17,7 +17,7 @@ void dead_store_elim(IrFunc* f) {
           else if (auto y = dyn_cast<StoreInst>(j);
                    y && y->lhs_sym == arr && y->arr.value == x->arr.value &&
                    y->index.value == x->index.value) {
-            bb->insts.Remove(x);
+            bb->instructions.Remove(x);
             delete x;
             break;
           }

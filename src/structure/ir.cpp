@@ -19,7 +19,7 @@ bool Inst::HasSideEffect() {
 }
 
 std::array<BasicBlock*, 2> BasicBlock::Succ() {
-  Inst* end = insts.tail;  // 必须非空
+  Inst* end = instructions.tail;  // 必须非空
   if (auto* x = dyn_cast<BranchInst>(end)) return {x->left, x->right};
   if (auto* x = dyn_cast<JumpInst>(end)) return {x->next, nullptr};
   if (isa<ReturnInst>(end)) return {nullptr, nullptr};
@@ -28,7 +28,7 @@ std::array<BasicBlock*, 2> BasicBlock::Succ() {
 }
 
 std::array<BasicBlock**, 2> BasicBlock::SuccRef() {
-  Inst* end = insts.tail;
+  Inst* end = instructions.tail;
   if (auto* x = dyn_cast<BranchInst>(end)) return {&x->left, &x->right};
   if (auto* x = dyn_cast<JumpInst>(end)) return {&x->next, nullptr};
   if (isa<ReturnInst>(end)) return {nullptr, nullptr};
@@ -37,9 +37,9 @@ std::array<BasicBlock**, 2> BasicBlock::SuccRef() {
 }
 
 bool BasicBlock::Valid() const {
-  Inst* end = insts.tail;
-  return end &&
-         (isa<BranchInst>(end) || isa<JumpInst>(end) || isa<ReturnInst>(end));
+  return instructions.tail && (isa<BranchInst>(instructions.tail) ||
+                               isa<JumpInst>(instructions.tail) ||
+                               isa<ReturnInst>(instructions.tail));
 }
 
 void Value::DeleteValue() {
@@ -241,7 +241,8 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
         }
         os << " for load/arr@" << x->load_or_arr << '\n';
       }
-      for (auto* inst = bb->insts.head; inst != nullptr; inst = inst->next) {
+      for (auto* inst = bb->instructions.head; inst != nullptr;
+           inst = inst->next) {
         os << "\t";
         if (auto* x = dyn_cast<AllocaInst>(inst)) {
           // temp ptr

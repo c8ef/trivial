@@ -311,7 +311,7 @@ void ConvertStmt(SsaContext* ctx, Stmt* stmt) {
   }
 }
 
-IrProgram* ConvertSSA(Program& p) {
+IrProgram* ConvertSSA(Program& program) {
   auto* ret = new IrProgram;
 
   // register all function, including builtin and user define function
@@ -322,7 +322,7 @@ IrProgram* ConvertSSA(Program& p) {
     builtin.val = func;
     ret->func.InsertAtEnd(func);
   }
-  for (auto& g : p.glob) {
+  for (auto& g : program.glob) {
     if (Func* f = std::get_if<0>(&g)) {
       auto* func = new IrFunc;
       func->builtin = false;
@@ -332,24 +332,22 @@ IrProgram* ConvertSSA(Program& p) {
     }
   }
 
-  for (auto& g : p.glob) {
+  for (auto& g : program.glob) {
     if (Func* f = std::get_if<0>(&g)) {
       IrFunc* func = f->val;
       auto* entry_basic_block = new BasicBlock;
       func->bb.InsertAtEnd(entry_basic_block);
 
-      // allocate space for function parameter
-      for (auto& p : f->params) {
-        if (p.dims.empty()) {
-          // alloca for each non-array param
-          auto* inst = new AllocaInst(&p, entry_basic_block);
-          p.value = inst;
-          // then copy param into it
-          new StoreInst(&p, inst, new ParamRef(&p), ConstValue::get(0),
+      // allocate space for function parameter which is not array
+      for (auto& decl : f->params) {
+        if (decl.dims.empty()) {
+          auto* inst = new AllocaInst(&decl, entry_basic_block);
+          decl.value = inst;
+          // copy the actual data into the parameter
+          new StoreInst(&decl, inst, new ParamRef(&decl), ConstValue::get(0),
                         entry_basic_block);
         } else {
-          // there is no need to alloca for array param
-          p.value = new ParamRef(&p);
+          decl.value = new ParamRef(&decl);
         }
       }
 
@@ -358,7 +356,7 @@ IrProgram* ConvertSSA(Program& p) {
         ConvertStmt(&ctx, stmt);
       }
 
-      // add extra return statement to avoid undefined behavior
+      // add extra return instruction for invalid basic block
       if (!ctx.bb->Valid()) {
         if (func->func->is_int) {
           new ReturnInst(ConstValue::get(0), ctx.bb);

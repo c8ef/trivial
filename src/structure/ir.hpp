@@ -128,11 +128,12 @@ struct BasicBlock {
   u32 dom_level;                           // dom树中的深度，根深度为0
   // 各种算法中用到，标记是否访问过，算法开头应把所有vis置false(调用IrFunc::clear_all_vis)
   bool vis;
-  IntrusiveList<Inst> insts;
+  IntrusiveList<Inst> instructions;
   IntrusiveList<Inst> mem_phis;  // 元素都是MemPhiInst
 
   std::array<BasicBlock*, 2> Succ();
   std::array<BasicBlock**, 2> SuccRef();  // 想修改succ时使用
+  // the last instruction of a valid basic block must be branch, jump or return
   [[nodiscard]] bool Valid() const;
 };
 
@@ -206,11 +207,11 @@ struct Inst : Value {
   BasicBlock* bb;
 
   Inst(Tag tag, Inst* insert_before) : Value(tag), bb(insert_before->bb) {
-    bb->insts.InsertBefore(this, insert_before);
+    bb->instructions.InsertBefore(this, insert_before);
   }
 
   Inst(Tag tag, BasicBlock* insert_at_end) : Value(tag), bb(insert_at_end) {
-    bb->insts.InsertAtEnd(this);
+    bb->instructions.InsertAtEnd(this);
   }
 
   // 只初始化tag，没有加入到链表中，调用者手动加入
@@ -407,7 +408,7 @@ struct PhiInst : Inst {
 
   explicit PhiInst(BasicBlock* insert_at_front) : Inst(Tag::Phi) {
     bb = insert_at_front;
-    bb->insts.InsertAtBegin(this);
+    bb->instructions.InsertAtBegin(this);
     u32 n = IncomingBbs().size();
     incoming_values.reserve(n);
     for (u32 i = 0; i < n; ++i) {

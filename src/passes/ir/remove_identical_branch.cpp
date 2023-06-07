@@ -20,22 +20,22 @@ static bool not_singly_used(Inst* i) { return i->uses.head != i->uses.tail; }
 // 目前我没有想到什么 general 的方法可以优化这种 if
 void remove_identical_branch(IrFunc* f) {
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
-    auto br = dyn_cast<BranchInst>(bb->insts.tail);
+    auto br = dyn_cast<BranchInst>(bb->instructions.tail);
     if (!br) continue;
     auto cond = dyn_cast<BinaryInst>(br->cond.value);
     if (!cond || cond->tag != Value::Tag::Eq ||
         cond->rhs.value != ConstValue::get(0))
       continue;
     BasicBlock *left = br->left, *right = br->right;
-    if (left->insts.head != left->insts.tail || left->pred.size() != 1 ||
-        right->pred.size() != 1)
+    if (left->instructions.head != left->instructions.tail ||
+        left->pred.size() != 1 || right->pred.size() != 1)
       continue;
-    auto j1 = dyn_cast<JumpInst>(left->insts.tail),
-         j2 = dyn_cast<JumpInst>(right->insts.tail);
+    auto j1 = dyn_cast<JumpInst>(left->instructions.tail),
+         j2 = dyn_cast<JumpInst>(right->instructions.tail);
     if (!j1 || !j2 || j1->next != j2->next) continue;
     BasicBlock* after = j1->next;
-    if (isa<PhiInst>(after->insts.head)) continue;
-    auto i1 = dyn_cast<LoadInst>(right->insts.head);
+    if (isa<PhiInst>(after->instructions.head)) continue;
+    auto i1 = dyn_cast<LoadInst>(right->instructions.head);
     if (!i1 || !isa<ParamRef>(i1->arr.value) || not_singly_used(i1)) continue;
     auto i2 = dyn_cast<LoadInst>(i1->next);
     if (!i2 || !isa<ParamRef>(i2->arr.value) ||
@@ -52,7 +52,7 @@ void remove_identical_branch(IrFunc* f) {
     auto i5 = dyn_cast<StoreInst>(i4->next);
     if (!i5 || i5->arr.value != i1->arr.value || i5->next != j2) continue;
     dbg("Performing remove identical branch");
-    bb->insts.Remove(br);
+    bb->instructions.Remove(br);
     delete br;
     new JumpInst(right, bb);
     f->bb.Remove(left);

@@ -28,7 +28,7 @@ bool remove_useless_loop(IrFunc* f) {
       }
     }
     if (!unique_exit) goto fail;  // 没有出口，确定是死循环，不考虑
-    for (Inst* i = unique_exit->insts.head;; i = i->next) {
+    for (Inst* i = unique_exit->instructions.head;; i = i->next) {
       if (auto x = dyn_cast<PhiInst>(i)) {
         Value* fst =
             x->incoming_values[std::find(unique_exit->pred.begin(),
@@ -48,7 +48,7 @@ bool remove_useless_loop(IrFunc* f) {
         break;
     }
     for (BasicBlock* bb : l->bbs) {
-      for (Inst* i = bb->insts.head; i; i = i->next) {
+      for (Inst* i = bb->instructions.head; i; i = i->next) {
         if (isa<ReturnInst>(i) || isa<StoreInst>(i)) goto fail;
         if (auto x = dyn_cast<CallInst>(i); x && x->func->has_side_effect)
           goto fail;
@@ -85,7 +85,7 @@ bool remove_useless_loop(IrFunc* f) {
           std::find(unique_exit->pred.begin(), unique_exit->pred.end(), *it) -
           unique_exit->pred.begin();
       unique_exit->pred.erase(unique_exit->pred.begin() + idx);
-      for (Inst* i = unique_exit->insts.head;; i = i->next) {
+      for (Inst* i = unique_exit->instructions.head;; i = i->next) {
         if (auto x = dyn_cast<PhiInst>(i)) {
           if (it == exiting.begin()) {
             x->incoming_values.emplace_back(x->incoming_values[idx].value, x);
@@ -96,7 +96,7 @@ bool remove_useless_loop(IrFunc* f) {
       }
     }
     for (BasicBlock* bb : l->bbs) {
-      for (Inst* i = bb->insts.head; i; i = i->next) {
+      for (Inst* i = bb->instructions.head; i; i = i->next) {
         for (auto [it, end] = i->Operands(); it < end; ++it) it->Set(nullptr);
       }
       f->bb.Remove(bb);

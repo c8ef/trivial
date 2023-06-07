@@ -11,7 +11,7 @@ void compute_callgraph(IrProgram* p) {
 
   for (auto f = p->func.head; f; f = f->next) {
     for (auto bb = f->bb.head; bb; bb = bb->next) {
-      for (auto inst = bb->insts.head; inst; inst = inst->next) {
+      for (auto inst = bb->instructions.head; inst; inst = inst->next) {
         if (auto x = dyn_cast<CallInst>(inst)) {
           f->callee_func.insert(x->func);
           x->func->caller_func.insert(f);

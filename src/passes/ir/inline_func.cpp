@@ -8,7 +8,7 @@ void inline_func(IrProgram* p) {
     bool can_inline = !f->builtin && f->bb.head->pred.empty();
     u32 inst_cnt = 0;
     for (BasicBlock* bb = f->bb.head; can_inline && bb; bb = bb->next) {
-      for (Inst* i = bb->insts.head; can_inline && i; i = i->next) {
+      for (Inst* i = bb->instructions.head; can_inline && i; i = i->next) {
         if (isa<AllocaInst>(i) || ++inst_cnt >= 64) can_inline = false;
         // todo:
         // 直接递归调用自身不能被内联，这是实现的限制，理论上应该是可以的，因为现在
@@ -34,7 +34,7 @@ void inline_func(IrProgram* p) {
     if (f->builtin) continue;
     calls.clear();
     for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
-      for (Inst* i = bb->insts.head; i; i = i->next) {
+      for (Inst* i = bb->instructions.head; i; i = i->next) {
         if (auto x = dyn_cast<CallInst>(i); x && x->func->can_inline)
           calls.push_back(x);
       }
@@ -86,7 +86,7 @@ void inline_func(IrProgram* p) {
         }
         // phi
         // 指令间可能循环引用，还可能引用在自身之后定义的值，需要先定义好，最后再填值
-        Inst* i = bb->insts.head;
+        Inst* i = bb->instructions.head;
         for (;; i = i->next) {
           if (isa<PhiInst>(i)) {
             val_map.insert({i, new PhiInst(cloned)});
@@ -126,7 +126,7 @@ void inline_func(IrProgram* p) {
         }
       }
       for (BasicBlock* bb = callee->bb.head; bb; bb = bb->next) {
-        for (Inst* i = bb->insts.head;; i = i->next) {
+        for (Inst* i = bb->instructions.head;; i = i->next) {
           if (auto x = dyn_cast<PhiInst>(i)) {
             auto cloned = static_cast<PhiInst*>(val_map.find(x)->second);
             for (u32 j = 0, sz = x->incoming_values.size(); j < sz; ++j) {
@@ -139,8 +139,8 @@ void inline_func(IrProgram* p) {
       BasicBlock* bb = x->bb;
       for (Inst* j = x->next; j;) {
         Inst* next = j->next;
-        bb->insts.Remove(j);
-        ret->insts.InsertAtEnd(j);
+        bb->instructions.Remove(j);
+        ret->instructions.InsertAtEnd(j);
         j->bb = ret;
         j = next;
       }
@@ -157,7 +157,7 @@ void inline_func(IrProgram* p) {
       } else {
         assert(x->uses.head == nullptr);
       }
-      bb->insts.Remove(x);
+      bb->instructions.Remove(x);
       delete x;
     }
   }

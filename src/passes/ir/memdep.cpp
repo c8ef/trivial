@@ -80,7 +80,7 @@ void clear_memdep(IrFunc* f) {
       auto i1 = static_cast<MemPhiInst*>(i);
       for (Use& u : i1->incoming_values) u.Set(nullptr);
     }
-    for (Inst* i = bb->insts.head; i; i = i->next) {
+    for (Inst* i = bb->instructions.head; i; i = i->next) {
       if (auto x = dyn_cast<MemOpInst>(i))
         x->mem_token.Set(nullptr);
       else if (auto x = dyn_cast<LoadInst>(i))
@@ -88,7 +88,7 @@ void clear_memdep(IrFunc* f) {
     }
   }
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
-    for (Inst* i = bb->insts.head; i; i = i->next) {
+    for (Inst* i = bb->instructions.head; i; i = i->next) {
       for (Use* u = i->uses.head; u; u = u->next) {
         assert(!isa<MemOpInst>(u->user) && !isa<MemPhiInst>(u->user));
       }
@@ -101,10 +101,10 @@ void clear_memdep(IrFunc* f) {
       i = next;
     }
     bb->mem_phis.head = bb->mem_phis.tail = nullptr;
-    for (Inst* i = bb->insts.head; i;) {
+    for (Inst* i = bb->instructions.head; i;) {
       Inst* next = i->next;
       if (auto x = dyn_cast<MemOpInst>(i)) {
-        bb->insts.Remove(x);
+        bb->instructions.Remove(x);
         delete x;
       }
       i = next;
@@ -119,7 +119,7 @@ void compute_memdep(IrFunc* f) {
   // 集合计算出来必定是一样的
   std::unordered_map<Decl*, LoadInfo> loads;
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
-    for (Inst* i = bb->insts.head; i; i = i->next) {
+    for (Inst* i = bb->instructions.head; i; i = i->next) {
       if (auto x = dyn_cast<LoadInst>(i)) {
         Decl* arr = x->lhs_sym;
         auto [it, inserted] = loads.insert({arr, {(u32)loads.size()}});
@@ -127,7 +127,7 @@ void compute_memdep(IrFunc* f) {
         info.loads.push_back(x);
         if (!inserted) continue;  // stores 已经计算过了
         for (BasicBlock* bb1 = f->bb.head; bb1; bb1 = bb1->next) {
-          for (Inst* i1 = bb1->insts.head; i1; i1 = i1->next) {
+          for (Inst* i1 = bb1->instructions.head; i1; i1 = i1->next) {
             bool is_alias = false;
             if (auto x = dyn_cast<StoreInst>(i1); x && alias(arr, x->lhs_sym))
               is_alias = true;
@@ -176,7 +176,7 @@ void compute_memdep(IrFunc* f) {
           values[loads.find(static_cast<Decl*>(i1->load_or_arr))->second.id] =
               i;
         }
-        for (Inst* i = bb->insts.head; i; i = i->next) {
+        for (Inst* i = bb->instructions.head; i; i = i->next) {
           if (auto x = dyn_cast<LoadInst>(i)) {
             x->mem_token.Set(values[loads.find(x->lhs_sym)->second.id]);
           } else if (isa<StoreInst>(i) || isa<CallInst>(i)) {
@@ -251,7 +251,7 @@ void compute_memdep(IrFunc* f) {
             values[it->second] = i;
           }
         }
-        for (Inst* i = bb->insts.head; i; i = i->next) {
+        for (Inst* i = bb->instructions.head; i; i = i->next) {
           if (auto x = dyn_cast<LoadInst>(i); x) {
             values[loads2.find(x)->second] = x;
           } else if (auto x = dyn_cast<MemOpInst>(i)) {

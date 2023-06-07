@@ -11,4 +11,4 @@ struct SsaContext {
   std::vector<std::pair<BasicBlock*, BasicBlock*>> loop_stk;
 };
 
-IrProgram* ConvertSSA(Program& p);
+IrProgram* ConvertSSA(Program& program);

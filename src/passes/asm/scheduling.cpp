@@ -145,17 +145,17 @@ void instruction_schedule(MachineFunc* f) {
   for (auto bb = f->bb.head; bb; bb = bb->next) {
     // create data dependence graph of instructions
     // instructions that read this register
-    std::map<u32, std::vector<Node*>> read_insts;
+    std::map<u32, std::vector<Node*>> read_instructions;
     // instruction that writes this register
-    std::map<u32, Node*> write_insts;
+    std::map<u32, Node*> write_instructions;
     // loads can be reordered, but not across store and call
     // instruction that might have side effect (store, call)
     Node* side_effect = nullptr;
-    std::vector<Node*> load_insts;
+    std::vector<Node*> load_instructions;
     std::vector<Node*> nodes;
 
     // calculate data dependence graph
-    for (auto inst = bb->insts.head; inst; inst = inst->next) {
+    for (auto inst = bb->instructions.head; inst; inst = inst->next) {
       if (isa<MIComment>(inst)) {
         continue;
       }
@@ -165,7 +165,7 @@ void instruction_schedule(MachineFunc* f) {
       for (auto& u : use) {
         if (u.is_reg()) {
           // add edges for read-after-write
-          if (auto& w = write_insts[u.value]) {
+          if (auto& w = write_instructions[u.value]) {
             w->out_edges.insert(node);
             node->in_edges.insert(w);
           }
@@ -175,12 +175,12 @@ void instruction_schedule(MachineFunc* f) {
       for (auto& d : def) {
         if (d.is_reg()) {
           // add edges for write-after-read
-          for (auto& r : read_insts[d.value]) {
+          for (auto& r : read_instructions[d.value]) {
             r->out_edges.insert(node);
             node->in_edges.insert(r);
           }
           // add edges for write-after-write
-          if (auto& w = write_insts[d.value]) {
+          if (auto& w = write_instructions[d.value]) {
             w->out_edges.insert(node);
             node->in_edges.insert(w);
           }
@@ -189,16 +189,16 @@ void instruction_schedule(MachineFunc* f) {
 
       for (auto& u : use) {
         if (u.is_reg()) {
-          // update read_insts
-          read_insts[u.value].push_back(node);
+          // update read_instructions
+          read_instructions[u.value].push_back(node);
         }
       }
 
       for (auto& d : def) {
         if (d.is_reg()) {
-          // update read_insts and write_insts
-          read_insts[d.value].clear();
-          write_insts[d.value] = node;
+          // update read_instructions and write_instructions
+          read_instructions[d.value].clear();
+          write_instructions[d.value] = node;
         }
       }
 
@@ -208,17 +208,17 @@ void instruction_schedule(MachineFunc* f) {
           side_effect->out_edges.insert(node);
           node->in_edges.insert(side_effect);
         }
-        for (auto& n : load_insts) {
+        for (auto& n : load_instructions) {
           n->out_edges.insert(node);
           node->in_edges.insert(n);
         }
-        load_insts.clear();
+        load_instructions.clear();
       } else if (isa<MILoad>(inst)) {
         if (side_effect) {
           side_effect->out_edges.insert(node);
           node->in_edges.insert(side_effect);
         }
-        load_insts.push_back(node);
+        load_instructions.push_back(node);
       }
 
       if (isa<MIStore>(inst) || isa<MICall>(inst)) {
@@ -269,7 +269,7 @@ void instruction_schedule(MachineFunc* f) {
     // schedule
     // removes instructions
     bb->control_transfer_inst = nullptr;
-    bb->insts.head = bb->insts.tail = nullptr;
+    bb->instructions.head = bb->instructions.tail = nullptr;
     // ready list
     std::vector<Node*> ready;
     // temp is in_degree in this part
@@ -290,7 +290,7 @@ void instruction_schedule(MachineFunc* f) {
         for (auto& f : units) {
           if (f.kind == kind && f.inflight == nullptr) {
             // fire!
-            bb->insts.InsertAtEnd(inst->inst);
+            bb->instructions.InsertAtEnd(inst->inst);
             num_inflight++;
             f.inflight = inst;
             f.complete_cycle = cycle + inst->latency;

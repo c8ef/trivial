@@ -57,23 +57,23 @@ void loop_unroll(IrFunc* f) {
     BasicBlock* bb_body = l->bbs[0];
     if (bb_body->pred.size() != 2) continue;
     u32 idx_in_body = bb_body == bb_body->pred[1];
-    auto br = dyn_cast<BranchInst>(bb_body->insts.tail);
+    auto br = dyn_cast<BranchInst>(bb_body->instructions.tail);
     if (!br || br->left != bb_body || br->cond.value->tag < Value::Tag::Lt ||
         br->cond.value->tag > Value::Tag::Gt)
       continue;
     auto cond = static_cast<BinaryInst*>(br->cond.value);
     BasicBlock* bb_cond = bb_body->pred[!idx_in_body];
     BasicBlock* bb_end = br->right;
-    auto br0 = dyn_cast<BranchInst>(bb_cond->insts.tail);
+    auto br0 = dyn_cast<BranchInst>(bb_cond->instructions.tail);
     if (!br0) {
-      auto jump = dyn_cast<JumpInst>(bb_cond->insts.tail);
+      auto jump = dyn_cast<JumpInst>(bb_cond->instructions.tail);
       if (!jump || jump->next != bb_body || bb_end->pred.size() != 1) continue;
-      assert(!isa<PhiInst>(bb_end->insts.head));
-      bb_cond->insts.Remove(jump);
+      assert(!isa<PhiInst>(bb_end->instructions.head));
+      bb_cond->instructions.Remove(jump);
       delete jump;
       br0 = new BranchInst(ConstValue::get(1), bb_body, bb_end, bb_cond);
       bb_end->pred.push_back(bb_cond);
-      for (Inst* i = bb_body->insts.head; i; i = i->next) {
+      for (Inst* i = bb_body->instructions.head; i; i = i->next) {
         PhiInst* phi = nullptr;
         for (Use* u = i->uses.head; u;) {
           Use* next = u->next;
@@ -174,7 +174,7 @@ void loop_unroll(IrFunc* f) {
 
     bool inst_ok = true;
     int inst_cnt = 0;
-    for (Inst* i = bb_body->insts.head; inst_ok && i; i = i->next) {
+    for (Inst* i = bb_body->instructions.head; inst_ok && i; i = i->next) {
       if (isa<PhiInst>(i) || isa<BranchInst>(i)) continue;
       // 包含 call 的循环没有什么展开的必要
       // 目前不考虑有局部数组的情形，memdep 应该不能处理多个局部数组对应同一个
@@ -193,7 +193,7 @@ void loop_unroll(IrFunc* f) {
       return it != map.end() ? it->second : v;
     };
     Inst* first_non_phi = nullptr;
-    for (Inst* i = bb_body->insts.head;; i = i->next) {
+    for (Inst* i = bb_body->instructions.head;; i = i->next) {
       if (auto x = dyn_cast<PhiInst>(i)) {
         map.insert({x, x->incoming_values[idx_in_body].value});
       } else {
@@ -203,10 +203,11 @@ void loop_unroll(IrFunc* f) {
     }
 
     Value* old_n = (&cond->lhs)[!cond_ix].value;
-    bb_body->insts.Remove(br);  // 后面需要往 bb_body 的最后
-                                // insert，所以先把跳转指令去掉，等下再加回来
+    bb_body->instructions.Remove(
+        br);  // 后面需要往 bb_body 的最后
+              // insert，所以先把跳转指令去掉，等下再加回来
     Inst* orig_last =
-        bb_body->insts
+        bb_body->instructions
             .tail;  // 不可能为 null，因为 bb_body 中至少存在一条计算 i1 的指令
     assert(orig_last != nullptr);
 
@@ -224,7 +225,7 @@ void loop_unroll(IrFunc* f) {
           clone_inst(i, bb_body, map);
           if (i == orig_last) break;
         }
-        for (Inst* i = bb_body->insts.head;; i = i->next) {
+        for (Inst* i = bb_body->instructions.head;; i = i->next) {
           if (auto x = dyn_cast<PhiInst>(i)) {
             map.find(x)->second = get(x->incoming_values[idx_in_body].value);
           } else
@@ -235,18 +236,18 @@ void loop_unroll(IrFunc* f) {
       delete br;
       bb_body->pred.erase(bb_body->pred.begin() + idx_in_body);
       new JumpInst(bb_end, bb_body);
-      for (Inst* i = bb_end->insts.head;; i = i->next) {
+      for (Inst* i = bb_end->instructions.head;; i = i->next) {
         if (auto x = dyn_cast<PhiInst>(i)) {
           x->incoming_values[idx_in_end].Set(
               get(x->incoming_values[idx_in_end].value));
         } else
           break;
       }
-      for (Inst* i = bb_body->insts.head;;) {
+      for (Inst* i = bb_body->instructions.head;;) {
         if (auto x = dyn_cast<PhiInst>(i)) {
           Inst* next = x->next;
           x->ReplaceAllUseWith(x->incoming_values[!idx_in_body].value);
-          bb_body->insts.Remove(x);
+          bb_body->instructions.Remove(x);
           delete x;
           i = next;
         } else
@@ -266,7 +267,7 @@ void loop_unroll(IrFunc* f) {
       clone_inst(i, bb_body, map);
       if (i == orig_last) break;
     }
-    bb_body->insts.InsertAtEnd(br);
+    bb_body->instructions.InsertAtEnd(br);
 
     Value* new_ix =
         new BinaryInst(Value::Tag::Add, get((&cond->lhs)[cond_ix].value),
@@ -283,7 +284,7 @@ void loop_unroll(IrFunc* f) {
     br->right = bb_if, bb_if->pred.push_back(bb_body);
     bb_last->pred.push_back(bb_if);
     {
-      // PhiInst 的构造函数要求 insts 非空，所以先插入最后的指令
+      // PhiInst 的构造函数要求 instructions 非空，所以先插入最后的指令
       auto if_cond = new BinaryInst(cond->tag, nullptr, nullptr, bb_if);
       new BranchInst(if_cond, bb_last, bb_end, bb_if);
       // 这一步是构造 bb_if 中的 phi，它来自 bb_body 和 bb_end 的 phi
@@ -294,7 +295,7 @@ void loop_unroll(IrFunc* f) {
       // 映射到刚刚插入的 phi 循环 3 构造来自 bb_end 的 phi 循环 1 和 2
       // 不能合并，否则违背了 phi 的 parallel 的特性，当 bb_body 中的一个 phi
       // 作为另一个 phi 的操作数时，就可能出错
-      for (Inst* i = bb_body->insts.head;; i = i->next) {
+      for (Inst* i = bb_body->instructions.head;; i = i->next) {
         if (auto x = dyn_cast<PhiInst>(i)) {
           Value *from_cond = x->incoming_values[!idx_in_body].value,
                 *from_body = get(x->incoming_values[idx_in_body].value);
@@ -305,19 +306,19 @@ void loop_unroll(IrFunc* f) {
         } else
           break;
       }
-      for (Inst *i = bb_body->insts.head, *i1 = bb_if->insts.head;;
-           i = i->next, i1 = i1->next) {
+      for (Inst *i = bb_body->instructions.head, *i1 = bb_if->instructions.head;
+           ; i = i->next, i1 = i1->next) {
         if (isa<PhiInst>(i))
           map.find(i)->second = i1;
         else
           break;
       }
-      for (Inst* i = bb_end->insts.head;; i = i->next) {
+      for (Inst* i = bb_end->instructions.head;; i = i->next) {
         if (auto x = dyn_cast<PhiInst>(i)) {
           Value *from_cond = x->incoming_values[!idx_in_end].value,
                 *from_body = get(x->incoming_values[idx_in_end].value);
           bool found = false;
-          for (Inst* j = bb_if->insts.head; !found; j = j->next) {
+          for (Inst* j = bb_if->instructions.head; !found; j = j->next) {
             if (auto y = dyn_cast<PhiInst>(j)) {
               if (y->incoming_values[0].value == from_cond &&
                   y->incoming_values[1].value == from_body) {
@@ -346,7 +347,7 @@ void loop_unroll(IrFunc* f) {
       if (i == orig_last) break;
     }
     new JumpInst(bb_end, bb_last);
-    for (Inst* i = bb_end->insts.head; i; i = i->next) {
+    for (Inst* i = bb_end->instructions.head; i; i = i->next) {
       if (auto x = dyn_cast<PhiInst>(i)) {
         x->incoming_values[idx_in_end].Set(
             get(x->incoming_values[idx_in_end].value));

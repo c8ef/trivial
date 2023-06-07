@@ -316,7 +316,7 @@ std::ostream& operator<<(std::ostream& os, const MachineProgram& p) {
       }
       os << endl;
 
-      for (auto inst = bb->insts.head; inst; inst = inst->next) {
+      for (auto inst = bb->instructions.head; inst; inst = inst->next) {
         output_instruction(inst, f, bb, true);
       }
     }

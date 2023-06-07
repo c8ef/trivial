@@ -89,7 +89,7 @@ void liveness_analysis(MachineFunc* f) {
   for (auto bb = f->bb.head; bb; bb = bb->next) {
     bb->liveuse.clear();
     bb->def.clear();
-    for (auto inst = bb->insts.head; inst; inst = inst->next) {
+    for (auto inst = bb->instructions.head; inst; inst = inst->next) {
       auto [def, use] = get_def_use(inst);
 
       // liveuse
@@ -207,7 +207,7 @@ void allocate_register(MachineProgram* p) {
         for (auto bb = f->bb.tail; bb; bb = bb->prev) {
           // calculate live set before each instruction
           auto live = bb->liveout;
-          for (auto inst = bb->insts.tail; inst; inst = inst->prev) {
+          for (auto inst = bb->instructions.tail; inst; inst = inst->prev) {
             auto [def, use] = get_def_use(inst);
             if (auto x = dyn_cast<MIMove>(inst)) {
               if (x->dst.needs_color() && x->rhs.needs_color() &&
@@ -542,7 +542,7 @@ void allocate_register(MachineProgram* p) {
 
         // replace usage of virtual registers
         for (auto bb = f->bb.head; bb; bb = bb->next) {
-          for (auto inst = bb->insts.head; inst; inst = inst->next) {
+          for (auto inst = bb->instructions.head; inst; inst = inst->next) {
             auto [def, use] = get_def_use_ptr(inst);
             if (def && colored.find(*def) != colored.end()) {
               *def = colored[*def];
@@ -618,7 +618,7 @@ void allocate_register(MachineProgram* p) {
                 store_inst->bb = bb;
                 store_inst->addr = MachineOperand::R(ArmReg::sp);
                 store_inst->shift = 0;
-                bb->insts.InsertAfter(store_inst, last_def);
+                bb->instructions.InsertAfter(store_inst, last_def);
                 generate_access_offset(store_inst);
                 store_inst->data = MachineOperand::V(vreg);
                 last_def = nullptr;
@@ -627,7 +627,7 @@ void allocate_register(MachineProgram* p) {
             };
 
             int i = 0;
-            for (auto orig_inst = bb->insts.head; orig_inst;
+            for (auto orig_inst = bb->instructions.head; orig_inst;
                  orig_inst = orig_inst->next) {
               auto [def, use] = get_def_use_ptr(orig_inst);
               if (def && *def == n) {

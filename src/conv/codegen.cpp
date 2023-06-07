@@ -188,7 +188,7 @@ MachineProgram* machine_code_generation(IrProgram* p) {
     // 2. translate instructions except phi
     for (auto bb = f->bb.head; bb; bb = bb->next) {
       auto mbb = bb_map[bb];
-      for (auto inst = bb->insts.head; inst; inst = inst->next) {
+      for (auto inst = bb->instructions.head; inst; inst = inst->next) {
         if (auto x = dyn_cast<JumpInst>(inst)) {
           auto new_inst = new MIJump(bb_map[x->next], mbb);
           mbb->control_transfer_inst = new_inst;
@@ -626,8 +626,8 @@ MachineProgram* machine_code_generation(IrProgram* p) {
       ParMv lhs;
       // each bb has a list of (vreg, rhs) parallel moves
       std::map<BasicBlock*, ParMv> mv;
-      for (auto inst = bb->insts.head; inst; inst = inst->next) {
-        // phi insts must appear at the beginning of bb
+      for (auto inst = bb->instructions.head; inst; inst = inst->next) {
+        // phi instructions must appear at the beginning of bb
         if (auto x = dyn_cast<PhiInst>(inst)) {
           // for each phi:
           // lhs = phi [r1 bb1], [r2 bb2] ...
@@ -646,7 +646,7 @@ MachineProgram* machine_code_generation(IrProgram* p) {
         }
       }
       // insert parallel mv at the beginning of current mbb
-      insert_parallel_mv(lhs, mbb->insts.head);
+      insert_parallel_mv(lhs, mbb->instructions.head);
       // insert parallel mv before the control transfer instruction of pred mbb
       for (auto& [bb, movs] : mv) {
         auto mbb = bb_map[bb];

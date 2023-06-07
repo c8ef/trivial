@@ -17,7 +17,7 @@ void extract_stack_array(IrProgram* p) {
         auto next_bb = bb->Succ()[0];
         if (next_bb) {
           bb = next_bb;
-          return bb->insts.head;
+          return bb->instructions.head;
         } else {
           return nullptr;
         }
@@ -27,7 +27,7 @@ void extract_stack_array(IrProgram* p) {
     std::unordered_set<AllocaInst*> delete_list;
     // iterate through all instructions in a BB
     for (auto bb = f->bb.head; bb; bb = bb->next) {
-      for (auto inst = bb->insts.head; inst; inst = inst->next) {
+      for (auto inst = bb->instructions.head; inst; inst = inst->next) {
         // check each AllocaInst
         if (auto alloc = dyn_cast<AllocaInst>(inst)) {
           bool can_make_global = true;
@@ -108,14 +108,14 @@ void extract_stack_array(IrProgram* p) {
               p->glob_decl.push_back(extracted_decl);
               // remove memset
               if (memset) {
-                memset->bb->insts.Remove(memset);
+                memset->bb->instructions.Remove(memset);
                 delete memset;
               }
               // replace all use to global ref
               alloc->ReplaceAllUseWith(extracted_decl->value);
               // remove all stores
               for (auto& s : stores) {
-                s->bb->insts.Remove(s);
+                s->bb->instructions.Remove(s);
                 delete s;
               }
               delete_list.insert(alloc);
@@ -127,7 +127,7 @@ void extract_stack_array(IrProgram* p) {
     }
     // delete extracted AllocaInst
     for (auto alloc : delete_list) {
-      alloc->bb->insts.Remove(alloc);
+      alloc->bb->instructions.Remove(alloc);
       delete alloc;
     }
   }

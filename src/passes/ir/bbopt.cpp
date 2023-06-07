@@ -20,7 +20,7 @@ bool bbopt(IrFunc* f) {
     // while 里的，但是在这里消除 if (x) br a else br a 也比较方便
     // 后面这种情形会被下面的循环引入，所以这个循环也放在 do while 里
     for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
-      if (auto x = dyn_cast<BranchInst>(bb->insts.tail)) {
+      if (auto x = dyn_cast<BranchInst>(bb->instructions.tail)) {
         BasicBlock* deleted = nullptr;
         if (auto cond = dyn_cast<ConstValue>(x->cond.value)) {
           new JumpInst(cond->imm ? x->left : x->right, bb);
@@ -32,12 +32,12 @@ bool bbopt(IrFunc* f) {
           changed = true;  // 可能引入新的以 jump 结尾的空基本块
         }
         if (deleted) {
-          bb->insts.Remove(x);
+          bb->instructions.Remove(x);
           delete x;
           u32 idx = std::find(deleted->pred.begin(), deleted->pred.end(), bb) -
                     deleted->pred.begin();
           deleted->pred.erase(deleted->pred.begin() + idx);
-          for (Inst* i = deleted->insts.head;; i = i->next) {
+          for (Inst* i = deleted->instructions.head;; i = i->next) {
             if (auto phi = dyn_cast<PhiInst>(i))
               phi->incoming_values.erase(phi->incoming_values.begin() + idx);
             else
@@ -52,16 +52,17 @@ bool bbopt(IrFunc* f) {
     for (BasicBlock* bb = f->bb.head->next; bb;) {
       BasicBlock* next = bb->next;
       // 要求 target != bb，避免去掉空的死循环
-      if (auto x = dyn_cast<JumpInst>(bb->insts.tail);
-          x && x->next != bb && bb->insts.head == bb->insts.tail) {
+      if (auto x = dyn_cast<JumpInst>(bb->instructions.tail);
+          x && x->next != bb &&
+          bb->instructions.head == bb->instructions.tail) {
         BasicBlock* target = x->next;
         // 如果存在一个 pred，它以 BranchInst 结尾，且 left 或 right 已经为
         // target，且 target 中存在 phi，则不能把另一个也变成 bb 例如 bb1: { b =
         // a + 1; if (x) br bb2 else br bb3 } bb2: { br bb3; } bb3: { c = phi
         // [a, bb1] [b bb2] } 这时 bb2 起到了一个区分 phi 来源的作用
-        if (isa<PhiInst>(target->insts.head)) {
+        if (isa<PhiInst>(target->instructions.head)) {
           for (BasicBlock* p : bb->pred) {
-            if (auto br = dyn_cast<BranchInst>(p->insts.tail)) {
+            if (auto br = dyn_cast<BranchInst>(p->instructions.tail)) {
               if (br->left == target || br->right == target) goto end;
             }
           }
@@ -76,7 +77,7 @@ bool bbopt(IrFunc* f) {
           target->pred.push_back(p);
         }
         u32 n_pred = bb->pred.size();
-        for (Inst* i = target->insts.head;; i = i->next) {
+        for (Inst* i = target->instructions.head;; i = i->next) {
           if (auto phi = dyn_cast<PhiInst>(i)) {
             Value* v = phi->incoming_values[idx].value;
             phi->incoming_values.erase(phi->incoming_values.begin() + idx);
@@ -106,7 +107,7 @@ bool bbopt(IrFunc* f) {
           u32 idx =
               std::find(s->pred.begin(), s->pred.end(), bb) - s->pred.begin();
           s->pred.erase(s->pred.begin() + idx);
-          for (Inst* i = s->insts.head;; i = i->next) {
+          for (Inst* i = s->instructions.head;; i = i->next) {
             if (auto x = dyn_cast<PhiInst>(i))
               x->incoming_values.erase(x->incoming_values.begin() + idx);
             else
@@ -129,13 +130,13 @@ bool bbopt(IrFunc* f) {
 
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
     if (bb->pred.size() == 1) {
-      for (Inst* i = bb->insts.head;;) {
+      for (Inst* i = bb->instructions.head;;) {
         Inst* next = i->next;
         if (auto x = dyn_cast<PhiInst>(i)) {
           inst_changed = true;
           assert(x->incoming_values.size() == 1);
           x->ReplaceAllUseWith(x->incoming_values[0].value);
-          bb->insts.Remove(x);
+          bb->instructions.Remove(x);
           delete x;
         } else
           break;
@@ -147,18 +148,18 @@ bool bbopt(IrFunc* f) {
   // 合并无条件跳转，这对性能没有影响，但是可以让其他优化更好写
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
   again:
-    if (auto x = dyn_cast<JumpInst>(bb->insts.tail)) {
+    if (auto x = dyn_cast<JumpInst>(bb->instructions.tail)) {
       BasicBlock* target = x->next;
       if (target->pred.size() == 1) {
-        assert(!isa<PhiInst>(target->insts.head));
-        for (Inst* i = target->insts.head; i;) {
+        assert(!isa<PhiInst>(target->instructions.head));
+        for (Inst* i = target->instructions.head; i;) {
           Inst* next = i->next;
-          target->insts.Remove(i);
-          bb->insts.InsertBefore(i, x);
+          target->instructions.Remove(i);
+          bb->instructions.InsertBefore(i, x);
           i->bb = bb;
           i = next;
         }
-        bb->insts.Remove(x);
+        bb->instructions.Remove(x);
         delete x;
         for (BasicBlock* s : bb->Succ()) {
           if (s) {

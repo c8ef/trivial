@@ -148,9 +148,9 @@ static void try_fold_lhs(BinaryInst* x) {
 // 把 i 放到 new_bb 的末尾。这个 bb 中的位置不重要，因为后续还会再调整它在 bb
 // 中的位置
 static void transfer_inst(Inst* i, BasicBlock* new_bb) {
-  i->bb->insts.Remove(i);
+  i->bb->instructions.Remove(i);
   i->bb = new_bb;
-  new_bb->insts.InsertBefore(i, new_bb->insts.tail);
+  new_bb->instructions.InsertBefore(i, new_bb->instructions.tail);
 }
 
 // 目前只考虑移动 BinaryInst 的位置，其他都不允许移动
@@ -245,12 +245,12 @@ static void schedule_late(std::unordered_set<Inst*>& vis, LoopInfo& info,
         lca = lca->idom;
       }
       transfer_inst(i, best);
-      for (Inst* j = best->insts.head; j; j = j->next) {
+      for (Inst* j = best->instructions.head; j; j = j->next) {
         if (!isa<PhiInst>(j)) {
           for (Use* u = i->uses.head; u; u = u->next) {
             if (u->user == j) {
-              best->insts.Remove(i);
-              best->insts.InsertBefore(i, j);
+              best->instructions.Remove(i);
+              best->instructions.InsertBefore(i, j);
               goto out;
             }
           }
@@ -276,7 +276,7 @@ again:
   auto replace = [&vn](Inst* o, Value* n) {
     if (o != n) {
       o->ReplaceAllUseWith(n);
-      o->bb->insts.Remove(o);
+      o->bb->instructions.Remove(o);
       auto it = std::find_if(
           vn.begin(), vn.end(),
           [o](std::pair<Value*, Value*> kv) { return kv.first == o; });
@@ -288,7 +288,7 @@ again:
     }
   };
   for (BasicBlock* bb : rpo) {
-    for (Inst* i = bb->insts.head; i;) {
+    for (Inst* i = bb->instructions.head; i;) {
       Inst* next = i->next;
       if (auto x = dyn_cast<BinaryInst>(i)) {
         if (isa<ConstValue>(x->lhs.value) && x->SwapOperand()) {
@@ -356,27 +356,28 @@ again:
   clear_memdep(f), dce(f), compute_memdep(f);
   // 阶段 2，gcm
   LoopInfo info = compute_loop_info(f);
-  std::vector<Inst*> insts;
+  std::vector<Inst*> instructions;
   for (BasicBlock* bb = entry; bb; bb = bb->next) {
-    for (Inst* i = bb->insts.head; i; i = i->next) insts.push_back(i);
+    for (Inst* i = bb->instructions.head; i; i = i->next)
+      instructions.push_back(i);
   }
   std::unordered_set<Inst*> vis;
-  for (Inst* i : insts) schedule_early(vis, entry, i);
+  for (Inst* i : instructions) schedule_early(vis, entry, i);
   vis.clear();
-  for (Inst* i : insts) schedule_late(vis, info, i);
+  for (Inst* i : instructions) schedule_late(vis, info, i);
   // fixme:
   // 其实本质上这个算法是没办法决定一个 bb
   // 内的任何顺序的，需要别的调度策略，这里简单做一个，激活 cmp
   // + branch 的优化
   for (BasicBlock* bb = entry; bb; bb = bb->next) {
-    if (auto x = dyn_cast<BranchInst>(bb->insts.tail)) {
+    if (auto x = dyn_cast<BranchInst>(bb->instructions.tail)) {
       if (x->cond.value->tag >= Value::Tag::Lt &&
           x->cond.value->tag <= Value::Tag::Ne) {
         auto c = static_cast<Inst*>(x->cond.value);
         if (c->bb == bb &&
             c->uses.head == c->uses.tail) {  // 要求只被这个 branch 使用
-          bb->insts.Remove(c);
-          bb->insts.InsertBefore(c, x);
+          bb->instructions.Remove(c);
+          bb->instructions.InsertBefore(c, x);
         }
       }
     }

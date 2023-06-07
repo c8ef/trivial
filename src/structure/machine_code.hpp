@@ -154,7 +154,7 @@ struct MachineFunc {
 struct MachineBB {
   DEFINE_LIST(MachineBB)
   BasicBlock* bb;
-  IntrusiveList<MachineInst> insts;
+  IntrusiveList<MachineInst> instructions;
   // predecessor and successor
   std::vector<MachineBB*> pred;
   std::array<MachineBB*, 2> succ;
@@ -309,13 +309,13 @@ struct MachineInst {
 
   MachineInst(Tag tag, MachineBB* InsertAtEnd) : bb(InsertAtEnd), tag(tag) {
     if (InsertAtEnd) {
-      InsertAtEnd->insts.InsertAtEnd(this);
+      InsertAtEnd->instructions.InsertAtEnd(this);
     }
   }
   MachineInst(Tag tag, MachineInst* InsertBefore)
       : bb(InsertBefore->bb), tag(tag) {
     if (bb) {
-      bb->insts.InsertBefore(this, InsertBefore);
+      bb->instructions.InsertBefore(this, InsertBefore);
     }
   }
   MachineInst(Tag tag) : tag(tag) {}
@@ -393,7 +393,7 @@ struct MIMove : MachineInst {
       : MachineInst(Tag::Mv), cond(ArmCond::Any) {
     if (InsertAtBegin) {
       bb = InsertAtBegin;
-      InsertAtBegin->insts.InsertAtBegin(this);
+      InsertAtBegin->instructions.InsertAtBegin(this);
     }
   }
   MIMove(MachineInst* InsertBefore)
@@ -455,7 +455,7 @@ struct MILoad : MIAccess {
   MILoad(MachineInst* InsertBefore) : MIAccess(Tag::Load, InsertBefore) {}
   MILoad(MachineBB* InsertAtBegin, int) : MIAccess(Tag::Load) {
     bb = InsertAtBegin;
-    InsertAtBegin->insts.InsertAtBegin(this);
+    InsertAtBegin->instructions.InsertAtBegin(this);
   }
 };
 
@@ -492,7 +492,7 @@ struct MIGlobal : MachineInst {
 
   MIGlobal(Decl* sym, MachineBB* InsertAtBegin)
       : MachineInst(Tag::Global), sym(sym) {
-    InsertAtBegin->insts.InsertAtBegin(this);
+    InsertAtBegin->instructions.InsertAtBegin(this);
   }
 };
 

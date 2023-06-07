@@ -14,24 +14,24 @@ void dce(IrFunc* f) {
 again:
   vis.clear();
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
-    for (Inst* i = bb->insts.head; i; i = i->next) {
+    for (Inst* i = bb->instructions.head; i; i = i->next) {
       if (i->HasSideEffect()) dfs(vis, i);
     }
   }
   // 无用的指令间可能相互使用，所以需要先清空 operand，否则 delete
   // 的时候会试图维护已经 delete 掉的指令的 uses
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
-    for (Inst* i = bb->insts.head; i; i = i->next) {
+    for (Inst* i = bb->instructions.head; i; i = i->next) {
       if (vis.find(i) == vis.end()) {
         for (auto [it, end] = i->Operands(); it < end; ++it) it->Set(nullptr);
       }
     }
   }
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
-    for (Inst* i = bb->insts.head; i;) {
+    for (Inst* i = bb->instructions.head; i;) {
       Inst* next = i->next;
       if (vis.find(i) == vis.end()) {
-        bb->insts.Remove(i);
+        bb->instructions.Remove(i);
         i->DeleteValue();
       }
       i = next;

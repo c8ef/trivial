@@ -13,13 +13,13 @@ void if_to_cond(MachineFunc* f) {
     // BB2:
     // ...some instructions + cond
     // BB3:
-    if (auto b = dyn_cast_nullable<MIBranch>(bb->insts.tail)) {
+    if (auto b = dyn_cast_nullable<MIBranch>(bb->instructions.tail)) {
       auto bb2 = bb->next;
       auto bb3 = b->target;
       if (bb2 && bb2->next == bb3) {
         bool can_optimize = true;
         u32 count = 0;
-        for (auto inst = bb2->insts.head; inst; inst = inst->next) {
+        for (auto inst = bb2->instructions.head; inst; inst = inst->next) {
           count++;
           if (auto x = dyn_cast<MIAccess>(inst)) {
             if (x->cond != ArmCond::Any) {
@@ -41,9 +41,9 @@ void if_to_cond(MachineFunc* f) {
 
         if (can_optimize) {
           dbg("Optimizing branches to conditional execution");
-          bb->insts.Remove(b);
+          bb->instructions.Remove(b);
           ArmCond cond = opposite_cond(b->cond);
-          for (auto inst = bb2->insts.head; inst; inst = inst->next) {
+          for (auto inst = bb2->instructions.head; inst; inst = inst->next) {
             if (auto x = dyn_cast<MIAccess>(inst)) {
               x->cond = cond;
             } else if (auto x = dyn_cast<MIFma>(inst)) {
