@@ -78,13 +78,13 @@ void clear_memdep(IrFunc* f) {
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
     for (Inst* i = bb->mem_phis.head; i; i = i->next) {
       auto i1 = static_cast<MemPhiInst*>(i);
-      for (Use& u : i1->incoming_values) u.set(nullptr);
+      for (Use& u : i1->incoming_values) u.Set(nullptr);
     }
     for (Inst* i = bb->insts.head; i; i = i->next) {
       if (auto x = dyn_cast<MemOpInst>(i))
-        x->mem_token.set(nullptr);
+        x->mem_token.Set(nullptr);
       else if (auto x = dyn_cast<LoadInst>(i))
-        x->mem_token.set(nullptr);
+        x->mem_token.Set(nullptr);
     }
   }
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
@@ -178,7 +178,7 @@ void compute_memdep(IrFunc* f) {
         }
         for (Inst* i = bb->insts.head; i; i = i->next) {
           if (auto x = dyn_cast<LoadInst>(i)) {
-            x->mem_token.set(values[loads.find(x->lhs_sym)->second.id]);
+            x->mem_token.Set(values[loads.find(x->lhs_sym)->second.id]);
           } else if (isa<StoreInst>(i) || isa<CallInst>(i)) {
             for (auto& load_info : loads) {
               if (load_info.second.stores.find(i) !=
@@ -188,7 +188,7 @@ void compute_memdep(IrFunc* f) {
             }
           }
         }
-        for (BasicBlock* x : bb->succ()) {
+        for (BasicBlock* x : bb->Succ()) {
           if (x) {
             worklist2.emplace_back(x, values);
             for (Inst* i = x->mem_phis.head; i; i = i->next) {
@@ -197,7 +197,7 @@ void compute_memdep(IrFunc* f) {
                   loads.find(static_cast<Decl*>(i1->load_or_arr))->second.id;
               u32 idx = std::find(x->pred.begin(), x->pred.end(), bb) -
                         x->pred.begin();
-              i1->incoming_values[idx].set(values[id]);
+              i1->incoming_values[idx].Set(values[id]);
             }
           }
         }
@@ -255,10 +255,10 @@ void compute_memdep(IrFunc* f) {
           if (auto x = dyn_cast<LoadInst>(i); x) {
             values[loads2.find(x)->second] = x;
           } else if (auto x = dyn_cast<MemOpInst>(i)) {
-            x->mem_token.set(values[loads2.find(x->load)->second]);
+            x->mem_token.Set(values[loads2.find(x->load)->second]);
           }
         }
-        for (BasicBlock* x : bb->succ()) {
+        for (BasicBlock* x : bb->Succ()) {
           if (x) {
             worklist2.emplace_back(x, values);
             for (Inst* i = x->mem_phis.head; i; i = i->next) {
@@ -268,7 +268,7 @@ void compute_memdep(IrFunc* f) {
                   it != loads2.end()) {
                 u32 idx = std::find(x->pred.begin(), x->pred.end(), bb) -
                           x->pred.begin();
-                i1->incoming_values[idx].set(values[it->second]);
+                i1->incoming_values[idx].Set(values[it->second]);
               }
             }
           }

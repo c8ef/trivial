@@ -94,13 +94,13 @@ struct Use {
   Use& operator=(const Use& rhs) {
     if (this != &rhs) {
       assert(user == rhs.user);
-      set(rhs.value);
+      Set(rhs.value);
     }
     return *this;
   }
 
-  // 注意不要写.value = xxx, 而是用.set(xxx), 因为需要记录被use的关系
-  void set(Value* v) {
+  // always use this function to set value other than directly touch value field
+  void Set(Value* v) {
     if (value) value->KillUse(this);
     value = v;
     if (v) v->AddUse(this);
@@ -113,7 +113,7 @@ struct Use {
 
 void Value::ReplaceAllUseWith(Value* v) const {
   // head->set会将head从链表中移除
-  while (uses.head) uses.head->set(v);
+  while (uses.head) uses.head->Set(v);
 }
 
 struct IrProgram {
@@ -136,9 +136,9 @@ struct BasicBlock {
   IntrusiveList<Inst> insts;
   IntrusiveList<Inst> mem_phis;  // 元素都是MemPhiInst
 
-  std::array<BasicBlock*, 2> succ();
-  std::array<BasicBlock**, 2> succ_ref();  // 想修改succ时使用
-  bool valid();
+  std::array<BasicBlock*, 2> Succ();
+  std::array<BasicBlock**, 2> SuccRef();  // 想修改succ时使用
+  [[nodiscard]] bool Valid() const;
 };
 
 struct IrFunc {
@@ -171,10 +171,10 @@ struct ConstValue : Value {
   DEFINE_CLASSOF(Value, p->tag == Tag::Const);
   const i32 imm;
 
-  static std::unordered_map<i32, ConstValue*> POOL;
+  static std::unordered_map<i32, ConstValue*> pool;
 
   static ConstValue* get(i32 imm) {
-    auto [it, inserted] = POOL.insert({imm, nullptr});
+    auto [it, inserted] = pool.insert({imm, nullptr});
     if (inserted) it->second = new ConstValue(imm);
     return it->second;
   }
@@ -211,12 +211,12 @@ struct Inst : Value {
   BasicBlock* bb;
 
   // insert this inst before `InsertBefore`
-  Inst(Tag tag, Inst* InsertBefore) : Value(tag), bb(InsertBefore->bb) {
-    bb->insts.InsertBefore(this, InsertBefore);
+  Inst(Tag tag, Inst* insert_before) : Value(tag), bb(insert_before->bb) {
+    bb->insts.InsertBefore(this, insert_before);
   }
 
   // insert this inst at the end of `InsertAtEnd`
-  Inst(Tag tag, BasicBlock* InsertAtEnd) : Value(tag), bb(InsertAtEnd) {
+  Inst(Tag tag, BasicBlock* insert_at_end) : Value(tag), bb(insert_at_end) {
     bb->insts.InsertAtEnd(this);
   }
 
@@ -224,9 +224,9 @@ struct Inst : Value {
   explicit Inst(Tag tag) : Value(tag) {}
 
   // 返回的指针对是一个左闭右开区间，表示这条指令的所有操作数，.value可能为空
-  std::pair<Use*, Use*> operands();
+  std::pair<Use*, Use*> Operands();
 
-  bool has_side_effect();
+  bool HasSideEffect();
 };
 
 struct BinaryInst : Inst {
@@ -242,7 +242,7 @@ struct BinaryInst : Inst {
   BinaryInst(Tag tag, Value* lhs, Value* rhs, Inst* insert_before)
       : Inst(tag, insert_before), lhs(lhs, this), rhs(rhs, this) {}
 
-  bool rhsCanBeImm() {
+  bool RHSCanBeImm() {
     // Add, Sub, Rsb, Mul, Div, Mod, Lt, Le, Ge, Gt, Eq, Ne, And, Or
     return (tag >= Tag::Add && tag <= Tag::Rsb) ||
            (tag >= Tag::Lt && tag <= Tag::Or);
@@ -272,13 +272,14 @@ struct BinaryInst : Inst {
       {Tag::And, Tag::And}, {Tag::Or, Tag::Or},
   };
 
-  bool swapOperand() {
+  bool SwapOperand() {
     for (auto [before, after] : kSwappableOperators) {
       if (tag == before) {
         // note:
         // Use是被pin在内存中的，不能直接swap它们。如果未来希望这样做，需要实现配套的设施，基本上就是把下面的逻辑在构造函数/拷贝运算符中实现
         tag = after;
-        Value *l = lhs.value, *r = rhs.value;
+        Value* l = lhs.value;
+        Value* r = rhs.value;
         l->KillUse(&lhs);
         r->KillUse(&rhs);
         l->AddUse(&rhs);
@@ -290,7 +291,7 @@ struct BinaryInst : Inst {
     return false;
   }
 
-  Value* optimizedValue() {
+  Value* OptimizedValue() {
     // imm on rhs
     if (auto* r = dyn_cast<ConstValue>(rhs.value)) {
       switch (tag) {
@@ -409,12 +410,12 @@ struct AllocaInst : Inst {
 struct PhiInst : Inst {
   DEFINE_CLASSOF(Value, p->tag == Tag::Phi);
   std::vector<Use> incoming_values;
-  std::vector<BasicBlock*>& incoming_bbs() { return bb->pred; }
+  std::vector<BasicBlock*>& IncomingBbs() { return bb->pred; }
 
   explicit PhiInst(BasicBlock* insert_at_front) : Inst(Tag::Phi) {
     bb = insert_at_front;
     bb->insts.InsertAtBegin(this);
-    u32 n = incoming_bbs().size();
+    u32 n = IncomingBbs().size();
     incoming_values.reserve(n);
     for (u32 i = 0; i < n; ++i) {
       // 在new
@@ -424,7 +425,7 @@ struct PhiInst : Inst {
   }
 
   explicit PhiInst(Inst* insert_before) : Inst(Tag::Phi, insert_before) {
-    u32 n = incoming_bbs().size();
+    u32 n = IncomingBbs().size();
     incoming_values.reserve(n);
     for (u32 i = 0; i < n; ++i) {
       incoming_values.emplace_back(nullptr, this);
@@ -445,7 +446,7 @@ struct MemOpInst : Inst {
 struct MemPhiInst : Inst {
   DEFINE_CLASSOF(Value, p->tag == Tag::MemPhi);
   std::vector<Use> incoming_values;
-  std::vector<BasicBlock*>& incoming_bbs() { return bb->pred; }
+  std::vector<BasicBlock*>& IncomingBbs() { return bb->pred; }
 
   // load依赖store和store依赖load两种依赖用到的MemPhiInst不一样
   // 前者的load_or_arr来自于load的数组地址，类型是Decl
@@ -456,7 +457,7 @@ struct MemPhiInst : Inst {
       : Inst(Tag::MemPhi), load_or_arr(load_or_arr) {
     bb = insert_at_front;
     bb->mem_phis.InsertAtBegin(this);
-    u32 n = incoming_bbs().size();
+    u32 n = IncomingBbs().size();
     incoming_values.reserve(n);
     for (u32 i = 0; i < n; ++i) {
       incoming_values.emplace_back(nullptr, this);

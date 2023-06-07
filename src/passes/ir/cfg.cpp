@@ -116,7 +116,7 @@ static void collect_loops(LoopInfo& info, std::vector<BasicBlock*>& worklist,
 static void populate(LoopInfo& info, BasicBlock* bb) {
   if (bb->vis) return;
   bb->vis = true;
-  for (BasicBlock* s : bb->succ()) {
+  for (BasicBlock* s : bb->Succ()) {
     if (s) populate(info, s);
   }
   auto it = info.loop_of_bb.find(bb);
@@ -143,7 +143,7 @@ LoopInfo compute_loop_info(IrFunc* f) {
 static void dfs(std::vector<BasicBlock*>& po, BasicBlock* bb) {
   if (!bb->vis) {
     bb->vis = true;
-    for (BasicBlock* x : bb->succ()) {
+    for (BasicBlock* x : bb->Succ()) {
       if (x) dfs(po, x);
     }
     po.push_back(bb);
@@ -162,7 +162,7 @@ std::unordered_map<BasicBlock*, std::unordered_set<BasicBlock*>> compute_df(
     IrFunc* f) {
   std::unordered_map<BasicBlock*, std::unordered_set<BasicBlock*>> df;
   for (BasicBlock* from = f->bb.head; from; from = from->next) {
-    for (BasicBlock* to : from->succ()) {
+    for (BasicBlock* to : from->Succ()) {
       if (to) {  // 枚举所有边 (from, to)
         BasicBlock* x = from;
         while (x == to || to->dom_by.find(x) ==

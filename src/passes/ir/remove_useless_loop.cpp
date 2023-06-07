@@ -18,7 +18,7 @@ bool remove_useless_loop(IrFunc* f) {
     }
     assert(pre_header != nullptr);
     for (BasicBlock* bb : l->bbs) {
-      for (BasicBlock* s : bb->succ()) {
+      for (BasicBlock* s : bb->Succ()) {
         if (s && std::find(l->bbs.begin(), l->bbs.end(), s) == l->bbs.end()) {
           if (unique_exit && unique_exit != s)
             goto fail;  // 有多于一个出口 bb，失败
@@ -70,7 +70,7 @@ bool remove_useless_loop(IrFunc* f) {
     changed = true;
     {
       bool found = false;
-      for (BasicBlock** s : pre_header->succ_ref()) {
+      for (BasicBlock** s : pre_header->SuccRef()) {
         if (s && *s == l->bbs[0]) {
           found = true;
           *s = unique_exit;
@@ -97,7 +97,7 @@ bool remove_useless_loop(IrFunc* f) {
     }
     for (BasicBlock* bb : l->bbs) {
       for (Inst* i = bb->insts.head; i; i = i->next) {
-        for (auto [it, end] = i->operands(); it < end; ++it) it->set(nullptr);
+        for (auto [it, end] = i->Operands(); it < end; ++it) it->Set(nullptr);
       }
       f->bb.Remove(bb);
       delete bb;

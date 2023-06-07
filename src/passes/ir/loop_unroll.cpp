@@ -80,10 +80,10 @@ void loop_unroll(IrFunc* f) {
           if (u->user->bb != bb_body && u->user != phi) {
             if (phi == nullptr) {
               phi = new PhiInst(bb_end);
-              phi->incoming_values[0].set(i);
-              phi->incoming_values[1].set(new UndefValue);
+              phi->incoming_values[0].Set(i);
+              phi->incoming_values[1].Set(new UndefValue);
             }
-            u->set(phi);
+            u->Set(phi);
           }
           u = next;
         }
@@ -237,7 +237,7 @@ void loop_unroll(IrFunc* f) {
       new JumpInst(bb_end, bb_body);
       for (Inst* i = bb_end->insts.head;; i = i->next) {
         if (auto x = dyn_cast<PhiInst>(i)) {
-          x->incoming_values[idx_in_end].set(
+          x->incoming_values[idx_in_end].Set(
               get(x->incoming_values[idx_in_end].value));
         } else
           break;
@@ -259,7 +259,7 @@ void loop_unroll(IrFunc* f) {
     Value* new_i0 = new BinaryInst(
         Value::Tag::Add, (&cond0->lhs)[cond0_i0].value, ConstValue::get(step),
         cond0 ? static_cast<Inst*>(cond0) : static_cast<Inst*>(br0));
-    br0->cond.set(new BinaryInst(cond0->tag, cond0_i0 == 0 ? new_i0 : old_n,
+    br0->cond.Set(new BinaryInst(cond0->tag, cond0_i0 == 0 ? new_i0 : old_n,
                                  cond0_i0 == 0 ? old_n : new_i0, cond0));
 
     for (Inst* i = first_non_phi;; i = i->next) {
@@ -273,7 +273,7 @@ void loop_unroll(IrFunc* f) {
                        ConstValue::get(step), br);
     Value* new_cond = new BinaryInst(cond->tag, cond_ix == 0 ? new_ix : old_n,
                                      cond_ix == 0 ? old_n : new_ix, br);
-    br->cond.set(new_cond);
+    br->cond.Set(new_cond);
 
     auto bb_if = new BasicBlock;
     auto bb_last = new BasicBlock;
@@ -298,10 +298,10 @@ void loop_unroll(IrFunc* f) {
         if (auto x = dyn_cast<PhiInst>(i)) {
           Value *from_cond = x->incoming_values[!idx_in_body].value,
                 *from_body = get(x->incoming_values[idx_in_body].value);
-          x->incoming_values[idx_in_body].set(from_body);
+          x->incoming_values[idx_in_body].Set(from_body);
           auto p = new PhiInst(if_cond);
-          p->incoming_values[0].set(from_cond);
-          p->incoming_values[1].set(from_body);
+          p->incoming_values[0].Set(from_cond);
+          p->incoming_values[1].Set(from_body);
         } else
           break;
       }
@@ -321,7 +321,7 @@ void loop_unroll(IrFunc* f) {
             if (auto y = dyn_cast<PhiInst>(j)) {
               if (y->incoming_values[0].value == from_cond &&
                   y->incoming_values[1].value == from_body) {
-                x->incoming_values[!idx_in_end].set(y);
+                x->incoming_values[!idx_in_end].Set(y);
                 found = true;
               }
             } else
@@ -329,15 +329,15 @@ void loop_unroll(IrFunc* f) {
           }
           if (!found) {
             auto p = new PhiInst(if_cond);
-            p->incoming_values[0].set(from_cond);
-            p->incoming_values[1].set(from_body);
-            x->incoming_values[!idx_in_end].set(p);
+            p->incoming_values[0].Set(from_cond);
+            p->incoming_values[1].Set(from_body);
+            x->incoming_values[!idx_in_end].Set(p);
           }
         } else
           break;
       }
-      (&if_cond->lhs)[cond_ix].set(get(phi_ix));
-      (&if_cond->lhs)[!cond_ix].set(old_n);
+      (&if_cond->lhs)[cond_ix].Set(get(phi_ix));
+      (&if_cond->lhs)[!cond_ix].Set(old_n);
     }
     bb_end->pred[!idx_in_end] = bb_if;
     bb_end->pred[idx_in_end] = bb_last;
@@ -348,7 +348,7 @@ void loop_unroll(IrFunc* f) {
     new JumpInst(bb_end, bb_last);
     for (Inst* i = bb_end->insts.head; i; i = i->next) {
       if (auto x = dyn_cast<PhiInst>(i)) {
-        x->incoming_values[idx_in_end].set(
+        x->incoming_values[idx_in_end].Set(
             get(x->incoming_values[idx_in_end].value));
       } else
         break;

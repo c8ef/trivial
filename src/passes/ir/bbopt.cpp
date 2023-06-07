@@ -3,7 +3,7 @@
 static void dfs(BasicBlock* bb) {
   if (!bb->vis) {
     bb->vis = true;
-    for (BasicBlock* x : bb->succ()) {
+    for (BasicBlock* x : bb->Succ()) {
       if (x) dfs(x);
     }
   }
@@ -70,7 +70,7 @@ bool bbopt(IrFunc* f) {
                   target->pred.begin();
         target->pred.erase(target->pred.begin() + idx);
         for (BasicBlock* p : bb->pred) {
-          auto succ = p->succ_ref();
+          auto succ = p->SuccRef();
           **std::find_if(succ.begin(), succ.end(),
                          [bb](BasicBlock** y) { return *y == bb; }) = target;
           target->pred.push_back(p);
@@ -101,7 +101,7 @@ bool bbopt(IrFunc* f) {
   // 中的这一项
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
     if (!bb->vis) {
-      for (BasicBlock* s : bb->succ()) {
+      for (BasicBlock* s : bb->Succ()) {
         if (s && s->vis) {
           u32 idx =
               std::find(s->pred.begin(), s->pred.end(), bb) - s->pred.begin();
@@ -160,7 +160,7 @@ bool bbopt(IrFunc* f) {
         }
         bb->insts.Remove(x);
         delete x;
-        for (BasicBlock* s : bb->succ()) {
+        for (BasicBlock* s : bb->Succ()) {
           if (s) {
             *std::find(s->pred.begin(), s->pred.end(), target) = bb;
           }

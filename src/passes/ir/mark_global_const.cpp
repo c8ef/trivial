@@ -12,7 +12,7 @@ static bool has_store(Value* v) {
       if (has_store(x)) return true;
     } else if (auto x = dyn_cast<CallInst>(u->user)) {
       // todo: 和 memdep 中的注释一样，这里可以更仔细地分析函数是否修改这个参数
-      if (x->has_side_effect()) return true;
+      if (x->HasSideEffect()) return true;
     } else {
       // 目前地址只可能以 GetElementPtr 传递，到 Load, Store,
       // Call 为止，不可能被别的指令，如 Phi 之类的使用

@@ -73,7 +73,7 @@ MachineProgram* machine_code_generation(IrProgram* p) {
       auto mbb = bb_map[bb];
       mbb->pred.reserve(bb->pred.size());
       // at most two successor
-      auto succ = bb->succ();
+      auto succ = bb->Succ();
       for (int i = 0; i < 2; i++) {
         if (succ[i]) {
           mbb->succ[i] = bb_map[succ[i]];
@@ -379,7 +379,7 @@ MachineProgram* machine_code_generation(IrProgram* p) {
             }
           }
           // try to use imm
-          if (x->rhsCanBeImm() && rhs_const) {
+          if (x->RHSCanBeImm() && rhs_const) {
             // Optimization 1:
             // try to use negative imm to reduce instructions
             if (x->tag == Value::Tag::Add || x->tag == Value::Tag::Sub) {
@@ -637,7 +637,7 @@ MachineProgram* machine_code_generation(IrProgram* p) {
           auto vr = new_virtual_reg();
           lhs.emplace_back(resolve(inst, mbb), vr);
           for (u32 i = 0; i < x->incoming_values.size(); i++) {
-            auto pred_bb = x->incoming_bbs()[i];
+            auto pred_bb = x->IncomingBbs()[i];
             auto val = resolve(x->incoming_values[i].value, bb_map[pred_bb]);
             mv[pred_bb].emplace_back(vr, val);
           }

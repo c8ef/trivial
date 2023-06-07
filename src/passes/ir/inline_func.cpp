@@ -58,7 +58,7 @@ void inline_func(IrProgram* p) {
         }
       }
       auto ret = new BasicBlock;
-      for (BasicBlock* s : x->bb->succ()) {
+      for (BasicBlock* s : x->bb->Succ()) {
         if (s) *std::find(s->pred.begin(), s->pred.end(), x->bb) = ret;
       }
       f->bb.InsertAfter(ret, x->bb);
@@ -130,7 +130,7 @@ void inline_func(IrProgram* p) {
           if (auto x = dyn_cast<PhiInst>(i)) {
             auto cloned = static_cast<PhiInst*>(val_map.find(x)->second);
             for (u32 j = 0, sz = x->incoming_values.size(); j < sz; ++j) {
-              cloned->incoming_values[j].set(get(x->incoming_values[j]));
+              cloned->incoming_values[j].Set(get(x->incoming_values[j]));
             }
           } else
             break;
@@ -151,7 +151,7 @@ void inline_func(IrProgram* p) {
         auto phi = new PhiInst(ret);
         assert(phi->incoming_values.size() == ret_map.size());
         for (u32 j = 0, sz = phi->incoming_values.size(); j < sz; ++j) {
-          phi->incoming_values[j].set(ret_map[j]);
+          phi->incoming_values[j].Set(ret_map[j]);
         }
         x->ReplaceAllUseWith(phi);
       } else {

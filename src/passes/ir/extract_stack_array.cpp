@@ -14,7 +14,7 @@ void extract_stack_array(IrProgram* p) {
       if (inst && inst->next) {
         return inst->next;
       } else {
-        auto next_bb = bb->succ()[0];
+        auto next_bb = bb->Succ()[0];
         if (next_bb) {
           bb = next_bb;
           return bb->insts.head;

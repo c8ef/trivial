@@ -107,7 +107,7 @@ void mem2reg(IrFunc* f) {
         }
         i = next;
       }
-      for (BasicBlock* x : bb->succ()) {
+      for (BasicBlock* x : bb->Succ()) {
         if (x) {
           worklist2.emplace_back(x, values);
           for (Inst* i = x->insts.head; i; i = i->next) {
@@ -116,7 +116,7 @@ void mem2reg(IrFunc* f) {
               if (it != phis.end()) {
                 u32 idx = std::find(x->pred.begin(), x->pred.end(), bb) -
                           x->pred.begin();  // bb 是 x 的哪个 pred?
-                p->incoming_values[idx].set(values[it->second]);
+                p->incoming_values[idx].Set(values[it->second]);
               }
             } else {
               break;  // PhiInst 一定是在指令序列的最前面，所以遇到第一个非

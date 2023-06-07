@@ -4,7 +4,7 @@
 
 #include "structure/ast.hpp"
 
-bool Inst::has_side_effect() {
+bool Inst::HasSideEffect() {
   if (isa<BranchInst>(this) || isa<JumpInst>(this) || isa<ReturnInst>(this) ||
       isa<StoreInst>(this))
     return true;
@@ -13,7 +13,7 @@ bool Inst::has_side_effect() {
   return false;
 }
 
-std::array<BasicBlock*, 2> BasicBlock::succ() {
+std::array<BasicBlock*, 2> BasicBlock::Succ() {
   Inst* end = insts.tail;  // 必须非空
   if (auto* x = dyn_cast<BranchInst>(end)) return {x->left, x->right};
   if (auto* x = dyn_cast<JumpInst>(end)) return {x->next, nullptr};
@@ -22,7 +22,7 @@ std::array<BasicBlock*, 2> BasicBlock::succ() {
   UNREACHABLE();
 }
 
-std::array<BasicBlock**, 2> BasicBlock::succ_ref() {
+std::array<BasicBlock**, 2> BasicBlock::SuccRef() {
   Inst* end = insts.tail;
   if (auto* x = dyn_cast<BranchInst>(end)) return {&x->left, &x->right};
   if (auto* x = dyn_cast<JumpInst>(end)) return {&x->next, nullptr};
@@ -31,7 +31,7 @@ std::array<BasicBlock**, 2> BasicBlock::succ_ref() {
   UNREACHABLE();
 }
 
-bool BasicBlock::valid() {
+bool BasicBlock::Valid() const {
   Inst* end = insts.tail;
   return end &&
          (isa<BranchInst>(end) || isa<JumpInst>(end) || isa<ReturnInst>(end));
@@ -72,9 +72,9 @@ void Value::DeleteValue() {
     UNREACHABLE();
 }
 
-std::unordered_map<i32, ConstValue*> ConstValue::POOL;
+std::unordered_map<i32, ConstValue*> ConstValue::pool;
 
-std::pair<Use*, Use*> Inst::operands() {
+std::pair<Use*, Use*> Inst::Operands() {
   constexpr std::pair<Use*, Use*> kEmpty{};
   if (auto* x = dyn_cast<BinaryInst>(this)) return {&x->lhs, &x->rhs + 1};
   if (auto* x = dyn_cast<BranchInst>(this)) return {&x->cond, &x->cond + 1};
@@ -232,7 +232,7 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
         for (u32 j = 0; j < x->incoming_values.size(); ++j) {
           if (j != 0) os << ", ";
           os << "[" << PV(v_index, x->incoming_values[j].value) << ", %_"
-             << bb_index.find(x->incoming_bbs()[j])->second << "]";
+             << bb_index.find(x->IncomingBbs()[j])->second << "]";
         }
         os << " for load/arr@" << x->load_or_arr << '\n';
       }
@@ -360,7 +360,7 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
           for (u32 i = 0; i < x->incoming_values.size(); ++i) {
             if (i != 0) os << ", ";
             os << "[" << PV(v_index, x->incoming_values[i].value) << ", %_"
-               << bb_index.find(x->incoming_bbs()[i])->second << "]";
+               << bb_index.find(x->IncomingBbs()[i])->second << "]";
           }
           os << '\n';
         } else if (auto* x = dyn_cast<MemOpInst>(inst)) {

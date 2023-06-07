@@ -123,22 +123,22 @@ static Value* vn_of(VN& vn, Value* x) {
 static void try_fold_lhs(BinaryInst* x) {
   if (auto r = dyn_cast<ConstValue>(x->rhs.value)) {
     if (x->tag == Value::Tag::Sub)
-      x->rhs.set(r = ConstValue::get(-r->imm)), x->tag = Value::Tag::Add;
+      x->rhs.Set(r = ConstValue::get(-r->imm)), x->tag = Value::Tag::Add;
     if (auto l = dyn_cast<BinaryInst>(x->lhs.value)) {
       if (auto lr = dyn_cast<ConstValue>(l->rhs.value)) {
         if (l->tag == Value::Tag::Sub)
-          l->rhs.set(lr = ConstValue::get(-lr->imm)), l->tag = Value::Tag::Add;
+          l->rhs.Set(lr = ConstValue::get(-lr->imm)), l->tag = Value::Tag::Add;
         if ((x->tag == Value::Tag::Add || x->tag == Value::Tag::Rsb) &&
             (l->tag == Value::Tag::Add || l->tag == Value::Tag::Rsb)) {
-          x->lhs.set(l->lhs.value);
-          x->rhs.set(ConstValue::get(
+          x->lhs.Set(l->lhs.value);
+          x->rhs.Set(ConstValue::get(
               r->imm + (x->tag == Value::Tag::Add ? lr->imm : -lr->imm)));
           x->tag = (x->tag == Value::Tag::Add) == (l->tag == Value::Tag::Add)
                        ? Value::Tag::Add
                        : Value::Tag::Rsb;
         } else if (x->tag == Value::Tag::Mul && r->tag == Value::Tag::Mul) {
-          x->lhs.set(l->lhs.value);
-          x->rhs.set(ConstValue::get(lr->imm * r->imm));
+          x->lhs.Set(l->lhs.value);
+          x->rhs.Set(ConstValue::get(lr->imm * r->imm));
         }
       }
     }
@@ -222,7 +222,7 @@ static void schedule_late(std::unordered_set<Inst*>& vis, LoopInfo& info,
                                    // bb2]，导致后面认为只有一个 bb 用到了%x0
                                    return &u2 == u;
                                  });
-          use = y->incoming_bbs()[it - y->incoming_values.begin()];
+          use = y->IncomingBbs()[it - y->incoming_values.begin()];
         }
         lca = lca ? find_lca(lca, use) : use;
       }
@@ -291,7 +291,7 @@ again:
     for (Inst* i = bb->insts.head; i;) {
       Inst* next = i->next;
       if (auto x = dyn_cast<BinaryInst>(i)) {
-        if (isa<ConstValue>(x->lhs.value) && x->swapOperand()) {
+        if (isa<ConstValue>(x->lhs.value) && x->SwapOperand()) {
           dbg("IMM operand moved from lhs to rhs");
         }
         auto l = dyn_cast<ConstValue>(x->lhs.value),
@@ -302,7 +302,7 @@ again:
           replace(x, ConstValue::get(op::Eval((op::Op)x->tag, l->imm, r->imm)));
         } else {
           try_fold_lhs(x);
-          if (auto value = x->optimizedValue()) {
+          if (auto value = x->OptimizedValue()) {
             // can be (arithmetically) replaced with one single value (constant
             // or one side of operands)
             replace(x, value);

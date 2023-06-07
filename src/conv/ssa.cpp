@@ -35,8 +35,8 @@ Value* ConvertExpr(SsaContext* ctx, Expr* expr) {
       ctx->func->bb.InsertAtEnd(after_bb);
       ctx->bb = after_bb;
       auto* inst = new PhiInst(ctx->bb);
-      inst->incoming_values[0].set(lhs);
-      inst->incoming_values[1].set(rhs);
+      inst->incoming_values[0].Set(lhs);
+      inst->incoming_values[1].Set(rhs);
       return inst;
     }
     auto* rhs = ConvertExpr(ctx, x->rhs);
@@ -233,7 +233,7 @@ void ConvertStmt(SsaContext* ctx, Stmt* stmt) {
     ctx->bb = bb_then;
     ConvertStmt(ctx, x->on_true);
     // jump to end bb
-    if (!ctx->bb->valid()) {
+    if (!ctx->bb->Valid()) {
       new JumpInst(bb_end, ctx->bb);
     }
     // else
@@ -242,7 +242,7 @@ void ConvertStmt(SsaContext* ctx, Stmt* stmt) {
       ConvertStmt(ctx, x->on_false);
     }
     // jump to end bb
-    if (!ctx->bb->valid()) {
+    if (!ctx->bb->Valid()) {
       new JumpInst(bb_end, ctx->bb);
     }
 
@@ -274,7 +274,7 @@ void ConvertStmt(SsaContext* ctx, Stmt* stmt) {
     ConvertStmt(ctx, x->body);
     ctx->loop_stk.pop_back();
     // jump to cond2 bb
-    if (!ctx->bb->valid()) {
+    if (!ctx->bb->Valid()) {
       new JumpInst(bb_cond2, ctx->bb);
     }
 
@@ -356,7 +356,7 @@ IrProgram* ConvertSSA(Program& p) {
       }
 
       // add extra return statement to avoid undefined behavior
-      if (!ctx.bb->valid()) {
+      if (!ctx.bb->Valid()) {
         if (func->func->is_int) {
           new ReturnInst(ConstValue::get(0), ctx.bb);
         } else {
@@ -368,7 +368,7 @@ IrProgram* ConvertSSA(Program& p) {
         bb->pred.clear();
       }
       for (BasicBlock* bb = func->bb.head; bb; bb = bb->next) {
-        for (BasicBlock* x : bb->succ()) {
+        for (BasicBlock* x : bb->Succ()) {
           if (x) x->pred.push_back(bb);
         }
       }
