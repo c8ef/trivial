@@ -68,9 +68,9 @@ struct Value {
   void KillUse(Use* u) { uses.Remove(u); }
 
   // 将对自身所有的使用替换成对v的使用
-  inline void replaceAllUseWith(Value* v);
-  // 调用deleteValue语义上相当于delete掉它，但是按照现在的实现不能直接delete它
-  void deleteValue();
+  inline void ReplaceAllUseWith(Value* v) const;
+  // 调用DeleteValue语义上相当于delete掉它，但是按照现在的实现不能直接delete它
+  void DeleteValue();
 };
 
 struct Use {
@@ -111,7 +111,7 @@ struct Use {
   }
 };
 
-void Value::replaceAllUseWith(Value* v) {
+void Value::ReplaceAllUseWith(Value* v) const {
   // head->set会将head从链表中移除
   while (uses.head) uses.head->set(v);
 }
@@ -159,10 +159,10 @@ struct IrFunc {
   bool can_inline;
 
   // pure函数的参数相同的调用可以删除
-  bool pure() const { return !(load_global || has_side_effect); }
+  [[nodiscard]] bool Pure() const { return !(load_global || has_side_effect); }
 
   // 将所有bb的vis置false
-  void clear_all_vis() {
+  void ClearAllVis() const {
     for (BasicBlock* b = bb.head; b; b = b->next) b->vis = false;
   }
 };
@@ -221,7 +221,7 @@ struct Inst : Value {
   }
 
   // 只初始化tag，没有加入到链表中，调用者手动加入
-  Inst(Tag tag) : Value(tag) {}
+  explicit Inst(Tag tag) : Value(tag) {}
 
   // 返回的指针对是一个左闭右开区间，表示这条指令的所有操作数，.value可能为空
   std::pair<Use*, Use*> operands();
@@ -292,7 +292,7 @@ struct BinaryInst : Inst {
 
   Value* optimizedValue() {
     // imm on rhs
-    if (auto r = dyn_cast<ConstValue>(rhs.value)) {
+    if (auto* r = dyn_cast<ConstValue>(rhs.value)) {
       switch (tag) {
         case Tag::Add:
         case Tag::Sub:

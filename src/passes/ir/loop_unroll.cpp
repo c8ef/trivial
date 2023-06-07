@@ -245,7 +245,7 @@ void loop_unroll(IrFunc* f) {
       for (Inst* i = bb_body->insts.head;;) {
         if (auto x = dyn_cast<PhiInst>(i)) {
           Inst* next = x->next;
-          x->replaceAllUseWith(x->incoming_values[!idx_in_body].value);
+          x->ReplaceAllUseWith(x->incoming_values[!idx_in_body].value);
           bb_body->insts.Remove(x);
           delete x;
           i = next;

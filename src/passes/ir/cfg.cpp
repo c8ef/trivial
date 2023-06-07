@@ -135,7 +135,7 @@ LoopInfo compute_loop_info(IrFunc* f) {
   LoopInfo info;
   std::vector<BasicBlock*> worklist;
   collect_loops(info, worklist, f->bb.head);
-  f->clear_all_vis();
+  f->ClearAllVis();
   populate(info, f->bb.head);
   return info;
 }
@@ -152,7 +152,7 @@ static void dfs(std::vector<BasicBlock*>& po, BasicBlock* bb) {
 
 std::vector<BasicBlock*> compute_rpo(IrFunc* f) {
   std::vector<BasicBlock*> ret;
-  f->clear_all_vis();
+  f->ClearAllVis();
   dfs(ret, f->bb.head);
   std::reverse(ret.begin(), ret.end());
   return ret;

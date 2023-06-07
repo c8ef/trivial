@@ -112,7 +112,7 @@ void extract_stack_array(IrProgram* p) {
                 delete memset;
               }
               // replace all use to global ref
-              alloc->replaceAllUseWith(extracted_decl->value);
+              alloc->ReplaceAllUseWith(extracted_decl->value);
               // remove all stores
               for (auto& s : stores) {
                 s->bb->insts.Remove(s);

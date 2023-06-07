@@ -153,7 +153,7 @@ void inline_func(IrProgram* p) {
         for (u32 j = 0, sz = phi->incoming_values.size(); j < sz; ++j) {
           phi->incoming_values[j].set(ret_map[j]);
         }
-        x->replaceAllUseWith(phi);
+        x->ReplaceAllUseWith(phi);
       } else {
         assert(x->uses.head == nullptr);
       }

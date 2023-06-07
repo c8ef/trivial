@@ -95,7 +95,7 @@ bool bbopt(IrFunc* f) {
     }
   } while (changed);
 
-  f->clear_all_vis();
+  f->ClearAllVis();
   dfs(f->bb.head);
   // 不可达的 bb 仍然可能有指向可达的 bb 的边，需要删掉目标 bb 中的 pred 和 phi
   // 中的这一项
@@ -134,7 +134,7 @@ bool bbopt(IrFunc* f) {
         if (auto x = dyn_cast<PhiInst>(i)) {
           inst_changed = true;
           assert(x->incoming_values.size() == 1);
-          x->replaceAllUseWith(x->incoming_values[0].value);
+          x->ReplaceAllUseWith(x->incoming_values[0].value);
           bb->insts.Remove(x);
           delete x;
         } else

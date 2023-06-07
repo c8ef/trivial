@@ -37,7 +37,7 @@ bool BasicBlock::valid() {
          (isa<BranchInst>(end) || isa<JumpInst>(end) || isa<ReturnInst>(end));
 }
 
-void Value::deleteValue() {
+void Value::DeleteValue() {
   if (auto x = dyn_cast<BinaryInst>(this))
     delete x;
   else if (auto x = dyn_cast<BranchInst>(this))
@@ -68,7 +68,7 @@ void Value::deleteValue() {
     delete x;
   else if (auto x = dyn_cast<ParamRef>(this))
     delete x;
-  else  // 假定永远只使用 UndefValue::INSTANCE，且永远不会调用 deleteValue
+  else  // 假定永远只使用 UndefValue::INSTANCE，且永远不会调用 DeleteValue
     UNREACHABLE();
 }
 

@@ -32,7 +32,7 @@ again:
       Inst* next = i->next;
       if (vis.find(i) == vis.end()) {
         bb->insts.Remove(i);
-        i->deleteValue();
+        i->DeleteValue();
       }
       i = next;
     }

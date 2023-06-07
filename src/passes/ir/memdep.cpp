@@ -148,7 +148,7 @@ void compute_memdep(IrFunc* f) {
   {
     std::vector<BasicBlock*> worklist;
     for (auto& [arr, info] : loads) {
-      f->clear_all_vis();
+      f->ClearAllVis();
       for (Inst* i : info.stores) worklist.push_back(i->bb);
       while (!worklist.empty()) {
         BasicBlock* x = worklist.back();
@@ -164,7 +164,7 @@ void compute_memdep(IrFunc* f) {
     }
     std::vector<std::pair<BasicBlock*, std::vector<Value*>>> worklist2{
         {f->bb.head, std::vector<Value*>(loads.size(), new UndefValue)}};
-    f->clear_all_vis();
+    f->ClearAllVis();
     while (!worklist2.empty()) {
       BasicBlock* bb = worklist2.back().first;
       std::vector<Value*> values = std::move(worklist2.back().second);
@@ -220,7 +220,7 @@ void compute_memdep(IrFunc* f) {
   {
     std::vector<BasicBlock*> worklist;
     for (auto& load_id : loads2) {
-      f->clear_all_vis();
+      f->ClearAllVis();
       worklist.push_back(load_id.first->bb);
       while (!worklist.empty()) {
         BasicBlock* x = worklist.back();
@@ -236,7 +236,7 @@ void compute_memdep(IrFunc* f) {
     }
     std::vector<std::pair<BasicBlock*, std::vector<Value*>>> worklist2{
         {f->bb.head, std::vector<Value*>(loads2.size(), new UndefValue)}};
-    f->clear_all_vis();
+    f->ClearAllVis();
     while (!worklist2.empty()) {
       BasicBlock* bb = worklist2.back().first;
       std::vector<Value*> values = std::move(worklist2.back().second);

@@ -43,7 +43,7 @@ void mem2reg(IrFunc* f) {
   std::vector<BasicBlock*> worklist;  // 用 stack 还是 queue 在这里没有本质区别
   std::unordered_map<PhiInst*, u32> phis;  // 记录加入的 phi 属于的 alloca 的 id
   for (u32 id = 0; id < allocas.size(); id++) {
-    f->clear_all_vis();
+    f->ClearAllVis();
     for (BasicBlock* bb : alloca_defs[id]) {
       worklist.push_back(bb);
     }
@@ -63,7 +63,7 @@ void mem2reg(IrFunc* f) {
   // 结果的引用换成对寄存器的引用，把 Store 改成寄存器赋值
   std::vector<std::pair<BasicBlock*, std::vector<Value*>>> worklist2{
       {f->bb.head, std::vector<Value*>(alloca_ids.size(), new UndefValue)}};
-  f->clear_all_vis();
+  f->ClearAllVis();
   while (!worklist2.empty()) {
     BasicBlock* bb = worklist2.back().first;
     std::vector<Value*> values = std::move(worklist2.back().second);
@@ -83,11 +83,11 @@ void mem2reg(IrFunc* f) {
           // alloca_ids 里有，它就一定是 AllocaInst
           auto it = alloca_ids.find(x->arr.value);
           if (it != alloca_ids.end()) {
-            x->replaceAllUseWith(values[it->second]);
+            x->ReplaceAllUseWith(values[it->second]);
             bb->insts.Remove(x);
             x->arr.value =
                 nullptr;  // 它用到被 delete 的 AllocaInst，已经不能再访问了
-            delete x;  // 跟 i->deleteValue() 作用是一样的 (但是跟 delete
+            delete x;  // 跟 i->DeleteValue() 作用是一样的 (但是跟 delete
                        // i 不一样)，逻辑上节省了一次 dispatch 的过程
           }
         } else if (auto x = dyn_cast<StoreInst>(i)) {

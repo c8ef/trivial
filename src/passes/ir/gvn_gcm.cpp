@@ -69,7 +69,7 @@ static Value* find_eq(VN& vn, LoadInst* x) {
 
 static bool is_pure_call(Inst* i) {
   auto x = dyn_cast<CallInst>(i);
-  return x && x->func->pure() &&
+  return x && x->func->Pure() &&
          std::none_of(x->args.begin(), x->args.end(), [](Use& arg) {
            return isa<GetElementPtrInst>(arg.value);
          });
@@ -275,7 +275,7 @@ again:
   VN vn;
   auto replace = [&vn](Inst* o, Value* n) {
     if (o != n) {
-      o->replaceAllUseWith(n);
+      o->ReplaceAllUseWith(n);
       o->bb->insts.Remove(o);
       auto it = std::find_if(
           vn.begin(), vn.end(),
@@ -284,7 +284,7 @@ again:
         std::swap(*it, vn.back());
         vn.pop_back();
       }
-      o->deleteValue();
+      o->DeleteValue();
     }
   };
   for (BasicBlock* bb : rpo) {

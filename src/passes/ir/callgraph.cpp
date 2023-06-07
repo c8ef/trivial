@@ -48,7 +48,7 @@ void compute_callgraph(IrProgram* p) {
   for (auto f = p->func.head; f; f = f->next) {
     auto func_purity = "function " + std::string(f->func->name) + " has " +
                        (f->has_side_effect ? "" : "no ") + "side effect, is " +
-                       (f->pure() ? "pure" : "impure");
+                       (f->Pure() ? "pure" : "impure");
     dbg(func_purity);
   }
 }
