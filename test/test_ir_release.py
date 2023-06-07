@@ -13,10 +13,9 @@ dirs = [
 exe = 'temp'
 asm = 'temp.s'
 ir_file = 'temp.ll'
-trivial_asm = f'../build/trivial -o {asm} -i'
 trivial_ir = f'../build/trivial --ir-file {ir_file} -i'
-lli = f'llc -O3 -march=arm -mcpu=cortex-a72 -float-abi=hard {ir_file} -o {asm}'
-cc = f'./aarch32-gcc/bin/arm-none-linux-gnueabihf-gcc -x assembler -z noexecstack {asm} -O3 -Werror -o {exe} -static -Laarch32 -lsysy'
+lli = f'llc -O3 {ir_file} -o {asm}'
+cc = f'clang {asm} -O3 -Werror -o {exe} -static -Lnative -lsysy'
 
 
 # print to stderr
@@ -25,43 +24,7 @@ def eprint(*args, **kwargs):
     sys.stderr.flush()
 
 
-# run single test case
 def run_case(sy_file, in_file, out_file):
-    # compile to executable
-    trivial_cmd = trivial_asm.split(' ') + [sy_file]
-    result = subprocess.run(trivial_cmd, timeout=60)
-    if result.returncode:
-        return False
-
-    result = subprocess.run(cc.split(' '))
-    if result.returncode:
-        return False
-
-    # run compiled file
-    if in_file:
-        with open(in_file) as f:
-            inputs = f.read().encode('utf-8')
-    else:
-        inputs = None
-    result = subprocess.run(f'./{exe}',
-                            input=inputs,
-                            stdout=subprocess.PIPE,
-                            timeout=60)
-    trimed = result.stdout.decode('utf-8').strip('\n')
-    out = f'{trimed}\n{result.returncode}'
-    out = out.strip()
-    # compare to reference
-    with open(out_file) as f:
-        ref = f.read().strip()
-    if out != ref:
-        eprint("out:")
-        eprint(out)
-        eprint("ref:")
-        eprint(ref)
-    return out == ref
-
-
-def run_case_llvm(sy_file, in_file, out_file):
     # compile to executable
     trivial_cmd = trivial_ir.split(' ') + [sy_file]
     result = subprocess.run(trivial_cmd, timeout=60)
@@ -101,7 +64,7 @@ def run_case_llvm(sy_file, in_file, out_file):
 
 
 # run all test cases
-def run_test(cases, enable_llvm):
+def run_test(cases):
     total = 0
     passed = 0
     failed_list = []
@@ -113,13 +76,7 @@ def run_test(cases, enable_llvm):
             # run test case
             eprint(f'running test "{sy_file}" ... ')
             try:
-                ret = False
-                if enable_llvm:
-                    ret = run_case_llvm(sy_file, in_file, out_file)
-                else:
-                    ret = run_case(sy_file, in_file, out_file)
-
-                if ret:
+                if run_case(sy_file, in_file, out_file):
                     eprint(f'\033[0;32mPASS\033[0m')
                     passed += 1
                 else:
@@ -195,11 +152,6 @@ if __name__ == '__main__':
                         help='specify input C source file, ' +
                         'default to empty, that means run ' +
                         'files in script configuration')
-    parser.add_argument('-l',
-                        '--llvm',
-                        default=False,
-                        action='store_true',
-                        help='use llvm generate assembly and run')
     # parse arguments
     args = parser.parse_args()
     # start running
@@ -220,9 +172,9 @@ if __name__ == '__main__':
             eprint(f'output file "{case[2]}" does not exist')
             exit(1)
         # run test case
-        run_test([case], args.llvm)
+        run_test([case])
     else:
         # change cwd to script path
         os.chdir(path.dirname(path.realpath(__file__)))
         # run test cases in configuration
-        run_test(scan_cases(dirs), args.llvm)
+        run_test(scan_cases(dirs))

@@ -9,6 +9,10 @@ build:
 	./aarch32-gcc/bin/arm-none-linux-gnueabihf-gcc sysy.c -c -o aarch32/sysy.o
 	ar rcs aarch32/libsysy.a aarch32/sysy.o
 	rm aarch32/sysy.o
+	mkdir -p native
+	gcc sysy.c -c -o native/sysy.o
+	ar rcs native/libsysy.a native/sysy.o
+	rm native/sysy.o
 
 clean:
-	rm -rf aarch32 aarch32-gcc gcc-arm-11.2-2022.02-x86_64-arm-none-linux-gnueabihf.tar.xz
+	rm -rf aarch32 aarch32-gcc gcc-arm-11.2-2022.02-x86_64-arm-none-linux-gnueabihf.tar.xz native

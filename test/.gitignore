@@ -1,4 +1,5 @@
 aarch32/
+native/
 aarch32-gcc/
 temp
 temp.s
