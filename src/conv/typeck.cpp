@@ -252,7 +252,17 @@ std::pair<Expr**, Expr**> Env::CheckExpr(Expr* e) {
     return f->is_int ? empty : none;
   }
   if (auto* x = dyn_cast<Index>(e)) {
-    // 这里允许不完全解引用数组
+    //      x.dims.size()
+    //      |
+    //      |
+    //      |           d.dims.size()
+    // x[1][2]          |
+    //                  |
+    // d[2][3][4][5][6][7]
+    //   |     | {pair} |
+    //   |     +--------+
+    //   |
+    //   d.dims.data()
     Decl* d = LookupDecl(x->name);
     x->lhs_sym = d;
     if (x->dims.size() > d->dims.size()) {
@@ -263,8 +273,7 @@ std::pair<Expr**, Expr**> Env::CheckExpr(Expr* e) {
         ERROR("array subscript is not an integer");
       }
     }
-    // 这里逻辑上总是返回：后面的，但是 stl 的实现中空 vector 的指针可能是
-    // nullptr，所以加个特判
+
     return d->dims.empty() ? empty
                            : std::pair{d->dims.data() + x->dims.size(),
                                        d->dims.data() + d->dims.size()};
@@ -291,13 +300,13 @@ void Env::Eval(Expr* e) {
     if (d->dims.size() != x->dims.size()) {
       ERROR("array dimension mismatch");
     }
-    u32 off = 0;
+    u64 off = 0;
 
     for (u64 i = 0; i < x->dims.size(); ++i) {
       Expr* idx = x->dims[i];
       Eval(idx);
       off +=
-          (i + 1 == x->dims.size() ? 1 : d->dims[i + 1]->result) * idx->result;
+          (i == x->dims.size() - 1 ? 1 : d->dims[i + 1]->result) * idx->result;
     }
     if (off >= d->flatten_init_list.size()) {
       ERROR("array index out of range");
