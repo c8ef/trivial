@@ -121,7 +121,7 @@ struct IrProgram {
   std::vector<Decl*> glob_decl;
 };
 
-std::ostream& operator<<(std::ostream& os, const IrProgram& dt);
+std::ostream& operator<<(std::ostream& os, const IrProgram& p);
 
 struct BasicBlock {
   DEFINE_LIST(BasicBlock)
