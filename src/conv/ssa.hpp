@@ -7,7 +7,7 @@ struct SsaContext {
   IrProgram* program;
   IrFunc* func;
   BasicBlock* bb;
-  // bb stack for (continue, break)
+  // basic block stack for (continue, break)
   std::vector<std::pair<BasicBlock*, BasicBlock*>> loop_stk;
 };
 

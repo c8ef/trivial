@@ -21,7 +21,7 @@ struct Use;
 struct MemPhiInst;
 
 struct Value {
-  // value is used by ...
+  // current value user
   IntrusiveList<Use> uses;
   // tag
   enum class Tag {
@@ -68,7 +68,7 @@ struct Value {
   void KillUse(Use* u) { uses.Remove(u); }
 
   // 将对自身所有的使用替换成对v的使用
-  inline void ReplaceAllUseWith(Value* v) const;
+  void ReplaceAllUseWith(Value* v) const;
   // 调用DeleteValue语义上相当于delete掉它，但是按照现在的实现不能直接delete它
   void DeleteValue();
 };
@@ -110,11 +110,6 @@ struct Use {
     if (value) value->KillUse(this);
   }
 };
-
-void Value::ReplaceAllUseWith(Value* v) const {
-  // head->set会将head从链表中移除
-  while (uses.head) uses.head->Set(v);
-}
 
 struct IrProgram {
   IntrusiveList<IrFunc> func;
@@ -169,8 +164,8 @@ struct IrFunc {
 
 struct ConstValue : Value {
   DEFINE_CLASSOF(Value, p->tag == Tag::Const);
-  const i32 imm;
 
+  const i32 imm;
   static std::unordered_map<i32, ConstValue*> pool;
 
   static ConstValue* get(i32 imm) {
@@ -180,7 +175,7 @@ struct ConstValue : Value {
   }
 
  private:
-  // use ConstValue::get instead
+  // const value pool
   explicit ConstValue(i32 imm) : Value(Tag::Const), imm(imm) {}
 };
 
@@ -207,15 +202,13 @@ struct UndefValue : Value {
 struct Inst : Value {
   DEFINE_CLASSOF(Value, Tag::Add <= p->tag && p->tag <= Tag::MemPhi);
   DEFINE_LIST(Inst)
-  // basic block
+
   BasicBlock* bb;
 
-  // insert this inst before `InsertBefore`
   Inst(Tag tag, Inst* insert_before) : Value(tag), bb(insert_before->bb) {
     bb->insts.InsertBefore(this, insert_before);
   }
 
-  // insert this inst at the end of `InsertAtEnd`
   Inst(Tag tag, BasicBlock* insert_at_end) : Value(tag), bb(insert_at_end) {
     bb->insts.InsertAtEnd(this);
   }
@@ -231,7 +224,7 @@ struct Inst : Value {
 
 struct BinaryInst : Inst {
   DEFINE_CLASSOF(Value, Tag::Add <= p->tag && p->tag <= Tag::Or);
-  // operands
+
   // loop unroll pass里用到了lhs和rhs的摆放顺序，不要随便修改
   Use lhs;
   Use rhs;

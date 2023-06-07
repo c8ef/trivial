@@ -313,6 +313,8 @@ void ConvertStmt(SsaContext* ctx, Stmt* stmt) {
 
 IrProgram* ConvertSSA(Program& p) {
   auto* ret = new IrProgram;
+
+  // register all function, including builtin and user define function
   for (Func& builtin : Func::builtin_function) {
     auto* func = new IrFunc;
     func->builtin = true;
@@ -329,28 +331,29 @@ IrProgram* ConvertSSA(Program& p) {
       ret->func.InsertAtEnd(func);
     }
   }
+
   for (auto& g : p.glob) {
     if (Func* f = std::get_if<0>(&g)) {
       IrFunc* func = f->val;
-      auto* entryBB = new BasicBlock;
-      func->bb.InsertAtEnd(entryBB);
+      auto* entry_basic_block = new BasicBlock;
+      func->bb.InsertAtEnd(entry_basic_block);
 
-      // setup params
+      // allocate space for function parameter
       for (auto& p : f->params) {
         if (p.dims.empty()) {
           // alloca for each non-array param
-          auto* inst = new AllocaInst(&p, entryBB);
+          auto* inst = new AllocaInst(&p, entry_basic_block);
           p.value = inst;
           // then copy param into it
           new StoreInst(&p, inst, new ParamRef(&p), ConstValue::get(0),
-                        entryBB);
+                        entry_basic_block);
         } else {
           // there is no need to alloca for array param
           p.value = new ParamRef(&p);
         }
       }
 
-      SsaContext ctx = {ret, func, entryBB};
+      SsaContext ctx = {ret, func, entry_basic_block};
       for (auto& stmt : f->body.stmts) {
         ConvertStmt(&ctx, stmt);
       }

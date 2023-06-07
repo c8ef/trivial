@@ -4,6 +4,11 @@
 
 #include "structure/ast.hpp"
 
+void Value::ReplaceAllUseWith(Value* v) const {
+  // head->set 会将 head 从链表中移除
+  while (uses.head) uses.head->Set(v);
+}
+
 bool Inst::HasSideEffect() {
   if (isa<BranchInst>(this) || isa<JumpInst>(this) || isa<ReturnInst>(this) ||
       isa<StoreInst>(this))
