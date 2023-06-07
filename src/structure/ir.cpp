@@ -224,7 +224,8 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
     }
     for (auto* bb = f->bb.head; bb; bb = bb->next) {
       u32 index = bb_index.find(bb)->second;
-      os << "_" << index << ": ; preds = ";
+      os << "_" << index << ":";
+      if (!bb->pred.empty()) os << "; preds = ";
       for (u32 i = 0; i < bb->pred.size(); ++i) {
         if (i != 0) os << ", ";
         os << "%_" << bb_index.find(bb->pred[i])->second;
