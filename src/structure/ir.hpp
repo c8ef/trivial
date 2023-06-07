@@ -118,8 +118,6 @@ void Value::replaceAllUseWith(Value* v) {
 struct IrProgram {
   ilist<IrFunc> func;
   std::vector<Decl*> glob_decl;
-
-  friend std::ostream& operator<<(std::ostream& os, const IrProgram& dt);
 };
 
 std::ostream& operator<<(std::ostream& os, const IrProgram& dt);

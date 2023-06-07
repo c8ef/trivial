@@ -79,6 +79,4 @@ int main(int argc, char* argv[]) {
     run_passes(code);
     std::ofstream(output) << *code;
   }
-
-  return 0;
 }
