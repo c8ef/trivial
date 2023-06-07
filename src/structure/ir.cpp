@@ -80,8 +80,6 @@ void Value::deleteValue() {
 
 std::unordered_map<i32, ConstValue*> ConstValue::POOL;
 
-UndefValue UndefValue::INSTANCE;
-
 std::pair<Use*, Use*> Inst::operands() {
   constexpr std::pair<Use*, Use*> empty{};
   if (auto x = dyn_cast<BinaryInst>(this))

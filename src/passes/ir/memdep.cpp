@@ -163,7 +163,7 @@ void compute_memdep(IrFunc* f) {
       }
     }
     std::vector<std::pair<BasicBlock*, std::vector<Value*>>> worklist2{
-        {f->bb.head, std::vector<Value*>(loads.size(), &UndefValue::INSTANCE)}};
+        {f->bb.head, std::vector<Value*>(loads.size(), new UndefValue)}};
     f->clear_all_vis();
     while (!worklist2.empty()) {
       BasicBlock* bb = worklist2.back().first;
@@ -235,8 +235,7 @@ void compute_memdep(IrFunc* f) {
       }
     }
     std::vector<std::pair<BasicBlock*, std::vector<Value*>>> worklist2{
-        {f->bb.head,
-         std::vector<Value*>(loads2.size(), &UndefValue::INSTANCE)}};
+        {f->bb.head, std::vector<Value*>(loads2.size(), new UndefValue)}};
     f->clear_all_vis();
     while (!worklist2.empty()) {
       BasicBlock* bb = worklist2.back().first;

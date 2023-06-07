@@ -188,27 +188,24 @@ struct GlobalRef : Value {
   DEFINE_CLASSOF(Value, p->tag == Tag::Global);
   Decl* decl;
 
-  GlobalRef(Decl* decl) : Value(Tag::Global), decl(decl) {}
+  explicit GlobalRef(Decl* decl) : Value(Tag::Global), decl(decl) {}
 };
 
 struct ParamRef : Value {
   DEFINE_CLASSOF(Value, p->tag == Tag::Param);
   Decl* decl;
 
-  ParamRef(Decl* decl) : Value(Tag::Param), decl(decl) {}
+  explicit ParamRef(Decl* decl) : Value(Tag::Param), decl(decl) {}
 };
 
 struct UndefValue : Value {
   DEFINE_CLASSOF(Value, p->tag == Tag::Undef);
 
   UndefValue() : Value(Tag::Undef) {}
-  // 这是一个全局可变变量，不过反正也不涉及多线程，不会有冲突
-  static UndefValue INSTANCE;
 };
 
 struct Inst : Value {
   DEFINE_CLASSOF(Value, Tag::Add <= p->tag && p->tag <= Tag::MemPhi);
-  // instruction linked list
   DEFINE_LIST(Inst)
   // basic block
   BasicBlock* bb;
@@ -239,11 +236,11 @@ struct BinaryInst : Inst {
   Use lhs;
   Use rhs;
 
-  BinaryInst(Tag tag, Value* lhs, Value* rhs, BasicBlock* InsertAtEnd)
-      : Inst(tag, InsertAtEnd), lhs(lhs, this), rhs(rhs, this) {}
+  BinaryInst(Tag tag, Value* lhs, Value* rhs, BasicBlock* insert_at_end)
+      : Inst(tag, insert_at_end), lhs(lhs, this), rhs(rhs, this) {}
 
-  BinaryInst(Tag tag, Value* lhs, Value* rhs, Inst* InsertBefore)
-      : Inst(tag, InsertBefore), lhs(lhs, this), rhs(rhs, this) {}
+  BinaryInst(Tag tag, Value* lhs, Value* rhs, Inst* insert_before)
+      : Inst(tag, insert_before), lhs(lhs, this), rhs(rhs, this) {}
 
   bool rhsCanBeImm() {
     // Add, Sub, Rsb, Mul, Div, Mod, Lt, Le, Ge, Gt, Eq, Ne, And, Or
@@ -268,7 +265,7 @@ struct BinaryInst : Inst {
       /* Or = */ "or",
   };
 
-  constexpr static std::pair<Tag, Tag> swapableOperators[11] = {
+  constexpr static std::pair<Tag, Tag> kSwappableOperators[11] = {
       {Tag::Add, Tag::Add}, {Tag::Sub, Tag::Rsb}, {Tag::Mul, Tag::Mul},
       {Tag::Lt, Tag::Gt},   {Tag::Le, Tag::Ge},   {Tag::Gt, Tag::Lt},
       {Tag::Ge, Tag::Le},   {Tag::Eq, Tag::Eq},   {Tag::Ne, Tag::Ne},
@@ -276,7 +273,7 @@ struct BinaryInst : Inst {
   };
 
   bool swapOperand() {
-    for (auto [before, after] : swapableOperators) {
+    for (auto [before, after] : kSwappableOperators) {
       if (tag == before) {
         // note:
         // Use是被pin在内存中的，不能直接swap它们。如果未来希望这样做，需要实现配套的设施，基本上就是把下面的逻辑在构造函数/拷贝运算符中实现
@@ -330,8 +327,8 @@ struct BranchInst : Inst {
   BasicBlock* right;
 
   BranchInst(Value* cond, BasicBlock* left, BasicBlock* right,
-             BasicBlock* InsertAtEnd)
-      : Inst(Tag::Branch, InsertAtEnd),
+             BasicBlock* insert_at_end)
+      : Inst(Tag::Branch, insert_at_end),
         cond(cond, this),
         left(left),
         right(right) {}
@@ -341,16 +338,16 @@ struct JumpInst : Inst {
   DEFINE_CLASSOF(Value, p->tag == Tag::Jump);
   BasicBlock* next;
 
-  JumpInst(BasicBlock* next, BasicBlock* InsertAtEnd)
-      : Inst(Tag::Jump, InsertAtEnd), next(next) {}
+  JumpInst(BasicBlock* next, BasicBlock* insert_at_end)
+      : Inst(Tag::Jump, insert_at_end), next(next) {}
 };
 
 struct ReturnInst : Inst {
   DEFINE_CLASSOF(Value, p->tag == Tag::Return);
   Use ret;
 
-  ReturnInst(Value* ret, BasicBlock* InsertAtEnd)
-      : Inst(Tag::Return, InsertAtEnd), ret(ret, this) {}
+  ReturnInst(Value* ret, BasicBlock* insert_at_end)
+      : Inst(Tag::Return, insert_at_end), ret(ret, this) {}
 };
 
 struct AccessInst : Inst {
@@ -360,8 +357,8 @@ struct AccessInst : Inst {
   Use arr;
   Use index;
   AccessInst(Inst::Tag tag, Decl* lhs_sym, Value* arr, Value* index,
-             BasicBlock* InsertAtEnd)
-      : Inst(tag, InsertAtEnd),
+             BasicBlock* insert_at_end)
+      : Inst(tag, insert_at_end),
         lhs_sym(lhs_sym),
         arr(arr, this),
         index(index, this) {}
@@ -371,16 +368,16 @@ struct GetElementPtrInst : AccessInst {
   DEFINE_CLASSOF(Value, p->tag == Tag::GetElementPtr);
   int multiplier;
   GetElementPtrInst(Decl* lhs_sym, Value* arr, Value* index, int multiplier,
-                    BasicBlock* InsertAtEnd)
-      : AccessInst(Tag::GetElementPtr, lhs_sym, arr, index, InsertAtEnd),
+                    BasicBlock* insert_at_end)
+      : AccessInst(Tag::GetElementPtr, lhs_sym, arr, index, insert_at_end),
         multiplier(multiplier) {}
 };
 
 struct LoadInst : AccessInst {
   DEFINE_CLASSOF(Value, p->tag == Tag::Load);
   Use mem_token;  // 由memdep pass计算
-  LoadInst(Decl* lhs_sym, Value* arr, Value* index, BasicBlock* InsertAtEnd)
-      : AccessInst(Tag::Load, lhs_sym, arr, index, InsertAtEnd),
+  LoadInst(Decl* lhs_sym, Value* arr, Value* index, BasicBlock* insert_at_end)
+      : AccessInst(Tag::Load, lhs_sym, arr, index, insert_at_end),
         mem_token(nullptr, this) {}
 };
 
@@ -388,8 +385,8 @@ struct StoreInst : AccessInst {
   DEFINE_CLASSOF(Value, p->tag == Tag::Store);
   Use data;
   StoreInst(Decl* lhs_sym, Value* arr, Value* data, Value* index,
-            BasicBlock* InsertAtEnd)
-      : AccessInst(Tag::Store, lhs_sym, arr, index, InsertAtEnd),
+            BasicBlock* insert_at_end)
+      : AccessInst(Tag::Store, lhs_sym, arr, index, insert_at_end),
         data(data, this) {}
 };
 
@@ -397,16 +394,16 @@ struct CallInst : Inst {
   DEFINE_CLASSOF(Value, p->tag == Tag::Call);
   IrFunc* func;
   std::vector<Use> args;
-  CallInst(IrFunc* func, BasicBlock* InsertAtEnd)
-      : Inst(Tag::Call, InsertAtEnd), func(func) {}
+  CallInst(IrFunc* func, BasicBlock* insert_at_end)
+      : Inst(Tag::Call, insert_at_end), func(func) {}
 };
 
 struct AllocaInst : Inst {
   DEFINE_CLASSOF(Value, p->tag == Tag::Alloca);
 
   Decl* sym;
-  AllocaInst(Decl* sym, BasicBlock* InsertBefore)
-      : Inst(Tag::Alloca, InsertBefore), sym(sym) {}
+  AllocaInst(Decl* sym, BasicBlock* insert_before)
+      : Inst(Tag::Alloca, insert_before), sym(sym) {}
 };
 
 struct PhiInst : Inst {
@@ -414,8 +411,8 @@ struct PhiInst : Inst {
   std::vector<Use> incoming_values;
   std::vector<BasicBlock*>& incoming_bbs() { return bb->pred; }
 
-  explicit PhiInst(BasicBlock* insertAtFront) : Inst(Tag::Phi) {
-    bb = insertAtFront;
+  explicit PhiInst(BasicBlock* insert_at_front) : Inst(Tag::Phi) {
+    bb = insert_at_front;
     bb->insts.InsertAtBegin(this);
     u32 n = incoming_bbs().size();
     incoming_values.reserve(n);

@@ -62,8 +62,7 @@ void mem2reg(IrFunc* f) {
   // mem2reg 算法阶段 2：变量重命名，即删除 Load，把对 Load
   // 结果的引用换成对寄存器的引用，把 Store 改成寄存器赋值
   std::vector<std::pair<BasicBlock*, std::vector<Value*>>> worklist2{
-      {f->bb.head,
-       std::vector<Value*>(alloca_ids.size(), &UndefValue::INSTANCE)}};
+      {f->bb.head, std::vector<Value*>(alloca_ids.size(), new UndefValue)}};
   f->clear_all_vis();
   while (!worklist2.empty()) {
     BasicBlock* bb = worklist2.back().first;

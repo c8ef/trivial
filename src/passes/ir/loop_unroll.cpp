@@ -81,7 +81,7 @@ void loop_unroll(IrFunc* f) {
             if (phi == nullptr) {
               phi = new PhiInst(bb_end);
               phi->incoming_values[0].set(i);
-              phi->incoming_values[1].set(&UndefValue::INSTANCE);
+              phi->incoming_values[1].set(new UndefValue);
             }
             u->set(phi);
           }
