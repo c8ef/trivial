@@ -32,12 +32,12 @@ using u64 = uint64_t;
 
 template <class T>
 struct IndexMapper {
-  std::map<T*, u32> mapping;
-  u32 index_max = 0;
+  std::map<T*, u64> mapping;
+  u64 index_max = 0;
 
-  u32 alloc() { return index_max++; }
+  u64 Alloc() { return index_max++; }
 
-  u32 get(T* t) {
+  u64 Get(T* t) {
     auto [it, inserted] = mapping.insert({t, index_max});
     index_max += inserted;
     return it->second;

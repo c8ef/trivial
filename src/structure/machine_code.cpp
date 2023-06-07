@@ -42,7 +42,7 @@ std::ostream& operator<<(std::ostream& os, const MachineProgram& p) {
 
   // print BB name
   auto pb = [&](MachineBB* bb) {
-    os << BB_PREFIX << bb_index.get(bb);
+    os << BB_PREFIX << bb_index.Get(bb);
     return "";
   };
 

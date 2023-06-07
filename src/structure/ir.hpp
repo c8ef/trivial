@@ -409,21 +409,12 @@ struct PhiInst : Inst {
   explicit PhiInst(BasicBlock* insert_at_front) : Inst(Tag::Phi) {
     bb = insert_at_front;
     bb->instructions.InsertAtBegin(this);
-    u32 n = IncomingBbs().size();
-    incoming_values.reserve(n);
-    for (u32 i = 0; i < n; ++i) {
-      // 在new
-      // PhiInst的时候还不知道它用到的value是什么，先填nullptr，后面再用Use::set填上
-      incoming_values.emplace_back(nullptr, this);
-    }
+    // fill with null use at construction
+    incoming_values.resize(IncomingBbs().size(), Use(nullptr, this));
   }
 
   explicit PhiInst(Inst* insert_before) : Inst(Tag::Phi, insert_before) {
-    u32 n = IncomingBbs().size();
-    incoming_values.reserve(n);
-    for (u32 i = 0; i < n; ++i) {
-      incoming_values.emplace_back(nullptr, this);
-    }
+    incoming_values.resize(IncomingBbs().size(), Use(nullptr, this));
   }
 };
 

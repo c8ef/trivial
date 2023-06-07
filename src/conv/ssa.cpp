@@ -8,19 +8,21 @@ Value* ConvertExpr(SSAContext* ctx, Expr* expr) {
     auto* lhs = ConvertExpr(ctx, x->lhs);
     if (x->tag == Expr::Tag::Mod) {
       auto* rhs = ConvertExpr(ctx, x->rhs);
-      // a % b := a - b * a / b (ARM has no MOD instruction)
+      // a % b := a - b * a / b
       auto* quotient = new BinaryInst(Value::Tag::Div, lhs, rhs, ctx->bb);
       auto* multiple = new BinaryInst(Value::Tag::Mul, rhs, quotient, ctx->bb);
       auto* remainder = new BinaryInst(Value::Tag::Sub, lhs, multiple, ctx->bb);
       return remainder;
     }
     if (x->tag == Expr::And || x->tag == Expr::Or) {
+      // handle short circuit
       auto* rhs_bb = new BasicBlock;
       auto* after_bb = new BasicBlock;
       ctx->func->bb.InsertAtEnd(rhs_bb);
       if (x->tag == Expr::And) {
         new BranchInst(lhs, rhs_bb, after_bb, ctx->bb);
-      } else {
+      }
+      if (x->tag == Expr::Or) {
         auto* inv =
             new BinaryInst(Value::Tag::Eq, lhs, ConstValue::get(0), ctx->bb);
         new BranchInst(inv, rhs_bb, after_bb, ctx->bb);
@@ -49,7 +51,7 @@ Value* ConvertExpr(SSAContext* ctx, Expr* expr) {
     return ConstValue::get(x->val);
   }
   if (auto* x = dyn_cast<Index>(expr)) {
-    // evalulate dims first
+    // evaluate dimensions first
     std::vector<Value*> dims;
     dims.reserve(x->dims.size());
     for (auto& p : x->dims) {

@@ -131,9 +131,10 @@ void PrintFlattenInit(std::ostream& os, Expr** dims, Expr** dims_end,
 
 // print value according to type
 struct PV {
-  IndexMapper<Value>& v_index;
+  IndexMapper<Value>& value_index;
   Value* v;
-  PV(IndexMapper<Value>& v_index, Value* v) : v_index(v_index), v(v) {}
+  PV(IndexMapper<Value>& value_index, Value* v)
+      : value_index(value_index), v(v) {}
   friend std::ostream& operator<<(std::ostream& os, const PV& pv) {
     if (auto* x = dyn_cast<ConstValue>(pv.v)) {
       os << x->imm;
@@ -144,11 +145,11 @@ struct PV {
     } else if (isa<UndefValue>(pv.v)) {
       os << "undef";
     } else if (isa<MemPhiInst>(pv.v) || isa<MemOpInst>(pv.v)) {
-      os << "mem" << pv.v_index.get(pv.v);
+      os << "mem" << pv.value_index.Get(pv.v);
     } else if (isa<StoreInst>(pv.v)) {
-      os << "store" << pv.v_index.get(pv.v);
+      os << "store" << pv.value_index.Get(pv.v);
     } else {
-      os << "%x" << pv.v_index.get(pv.v);
+      os << "%x" << pv.value_index.Get(pv.v);
     }
     return os;
   }
@@ -216,7 +217,7 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
     // bb 的标号没有必要用 IndexMapper，而且 IndexMapper
     // 的编号是先到先得，这看着并不是很舒服
     std::map<BasicBlock*, u32> bb_index;
-    IndexMapper<Value> v_index;
+    IndexMapper<Value> value_index;
     for (auto* bb = f->bb.head; bb; bb = bb->next) {
       u32 idx = bb_index.size();
       bb_index.insert({bb, idx});
@@ -233,10 +234,10 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
       os << '\n';
       for (Inst* i = bb->mem_phis.head; i; i = i->next) {
         auto* x = static_cast<MemPhiInst*>(i);
-        os << "\t; mem" << v_index.get(x) << " = MemPhi ";
+        os << "\t; mem" << value_index.Get(x) << " = MemPhi ";
         for (u32 j = 0; j < x->incoming_values.size(); ++j) {
           if (j != 0) os << ", ";
-          os << "[" << PV(v_index, x->incoming_values[j].value) << ", %_"
+          os << "[" << PV(value_index, x->incoming_values[j].value) << ", %_"
              << bb_index.find(x->IncomingBbs()[j])->second << "]";
         }
         os << " for load/arr@" << x->load_or_arr << '\n';
@@ -246,12 +247,12 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
         os << "\t";
         if (auto* x = dyn_cast<AllocaInst>(inst)) {
           // temp ptr
-          u32 temp = v_index.alloc();
+          u32 temp = value_index.Alloc();
           os << "%t" << temp << " = alloca ";
           PrintDims(os, x->sym->dims.data(),
                     x->sym->dims.data() + x->sym->dims.size());
           os << ", align 4" << '\n';
-          os << "\t" << PV(v_index, inst) << " = getelementptr inbounds ";
+          os << "\t" << PV(value_index, inst) << " = getelementptr inbounds ";
           PrintDims(os, x->sym->dims.data(),
                     x->sym->dims.data() + x->sym->dims.size());
           os << ", ";
@@ -264,82 +265,82 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
             os << ", i32 0, i32 0" << '\n';
           }
         } else if (auto* x = dyn_cast<GetElementPtrInst>(inst)) {
-          os << "; getelementptr " << v_index.get(inst) << '\n' << "\t";
-          u32 temp = v_index.alloc();
-          os << "%t" << temp << " = mul i32 " << PV(v_index, x->index.value)
+          os << "; getelementptr " << value_index.Get(inst) << '\n' << "\t";
+          u32 temp = value_index.Alloc();
+          os << "%t" << temp << " = mul i32 " << PV(value_index, x->index.value)
              << ", " << x->multiplier << '\n';
-          os << "\t" << PV(v_index, inst)
+          os << "\t" << PV(value_index, inst)
              << " = getelementptr inbounds i32, i32* "
-             << PV(v_index, x->arr.value) << ", i32 "
+             << PV(value_index, x->arr.value) << ", i32 "
              << "%t" << temp << '\n';
         } else if (auto* x = dyn_cast<StoreInst>(inst)) {
-          os << "; store " << v_index.get(x) << '\n' << "\t";
+          os << "; store " << value_index.Get(x) << '\n' << "\t";
           // temp ptr
-          u32 temp = v_index.alloc();
+          u32 temp = value_index.Alloc();
           os << "%t" << temp << " = getelementptr inbounds i32, i32";
-          os << "* " << PV(v_index, x->arr.value) << ", ";
-          os << "i32 " << PV(v_index, x->index.value);
+          os << "* " << PV(value_index, x->arr.value) << ", ";
+          os << "i32 " << PV(value_index, x->index.value);
           os << '\n';
-          os << "\tstore i32 " << PV(v_index, x->data.value) << ", i32* %t"
+          os << "\tstore i32 " << PV(value_index, x->data.value) << ", i32* %t"
              << temp << ", align 4" << '\n';
         } else if (auto* x = dyn_cast<LoadInst>(inst)) {
           if (x->mem_token.value) {
             os << "; load@" << x << " arr@" << x->arr.value << ", use "
-               << PV(v_index, x->mem_token.value) << '\n'
+               << PV(value_index, x->mem_token.value) << '\n'
                << "\t";
           }
           // temp ptr
-          u32 temp = v_index.alloc();
+          u32 temp = value_index.Alloc();
           os << "%t" << temp << " = getelementptr inbounds i32, i32";
-          os << "* " << PV(v_index, x->arr.value) << ", ";
-          os << "i32 " << PV(v_index, x->index.value);
+          os << "* " << PV(value_index, x->arr.value) << ", ";
+          os << "i32 " << PV(value_index, x->index.value);
           os << '\n';
-          os << "\t" << PV(v_index, inst) << " = load i32, i32* %t" << temp
+          os << "\t" << PV(value_index, inst) << " = load i32, i32* %t" << temp
              << ", align 4" << '\n';
         } else if (auto* x = dyn_cast<BinaryInst>(inst)) {
           const auto* op_name = BinaryInst::kLLVMOps[static_cast<int>(x->tag)];
           bool conversion =
               Value::Tag::Lt <= x->tag && x->tag <= Value::Tag::Ne;
           if (conversion) {
-            u32 temp = v_index.alloc();
+            u32 temp = value_index.Alloc();
             os << "%t" << temp << " = " << op_name << " i32 "
-               << PV(v_index, x->lhs.value) << ", " << PV(v_index, x->rhs.value)
-               << '\n';
-            os << "\t" << PV(v_index, inst) << " = "
+               << PV(value_index, x->lhs.value) << ", "
+               << PV(value_index, x->rhs.value) << '\n';
+            os << "\t" << PV(value_index, inst) << " = "
                << "zext i1 "
                << "%t" << temp << " to i32" << '\n';
           } else if (x->tag == Value::Tag::Rsb) {
-            os << PV(v_index, inst) << " = sub i32 "
-               << PV(v_index, x->rhs.value) << ", " << PV(v_index, x->lhs.value)
-               << '\n';
+            os << PV(value_index, inst) << " = sub i32 "
+               << PV(value_index, x->rhs.value) << ", "
+               << PV(value_index, x->lhs.value) << '\n';
           } else {
-            os << PV(v_index, inst) << " = " << op_name << " i32 "
-               << PV(v_index, x->lhs.value) << ", " << PV(v_index, x->rhs.value)
-               << '\n';
+            os << PV(value_index, inst) << " = " << op_name << " i32 "
+               << PV(value_index, x->lhs.value) << ", "
+               << PV(value_index, x->rhs.value) << '\n';
           }
         } else if (auto* x = dyn_cast<JumpInst>(inst)) {
           os << "br label %_" << bb_index.find(x->next)->second << '\n';
         } else if (auto* x = dyn_cast<BranchInst>(inst)) {
           // add comment
-          os << "; if " << PV(v_index, x->cond.value) << " then _"
+          os << "; if " << PV(value_index, x->cond.value) << " then _"
              << bb_index.find(x->left)->second << " else _"
              << bb_index.find(x->right)->second << '\n';
-          u32 temp = v_index.alloc();
+          u32 temp = value_index.Alloc();
           os << "\t%t" << temp << " = icmp ne i32 "
-             << PV(v_index, x->cond.value) << ", 0" << '\n';
+             << PV(value_index, x->cond.value) << ", 0" << '\n';
           os << "\tbr i1 %t" << temp << ", label %_"
              << bb_index.find(x->left)->second << ", label %_"
              << bb_index.find(x->right)->second << '\n';
         } else if (auto* x = dyn_cast<ReturnInst>(inst)) {
           if (x->ret.value) {
-            os << "ret i32 " << PV(v_index, x->ret.value) << '\n';
+            os << "ret i32 " << PV(value_index, x->ret.value) << '\n';
           } else {
             os << "ret void" << '\n';
           }
         } else if (auto* x = dyn_cast<CallInst>(inst)) {
           Func* callee = x->func->func;
           if (callee->is_int) {
-            os << PV(v_index, inst) << " = call i32";
+            os << PV(value_index, inst) << " = call i32";
           } else {
             os << "call void";
           }
@@ -354,7 +355,7 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
               os << "i32 * ";
             }
             // arg
-            os << PV(v_index, x->args[i].value);
+            os << PV(value_index, x->args[i].value);
             if (i + 1 < x->args.size()) {
               // not last element
               os << ", ";
@@ -362,16 +363,16 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
           }
           os << ")" << '\n';
         } else if (auto* x = dyn_cast<PhiInst>(inst)) {
-          os << PV(v_index, inst) << " = phi i32 ";
+          os << PV(value_index, inst) << " = phi i32 ";
           for (u32 i = 0; i < x->incoming_values.size(); ++i) {
             if (i != 0) os << ", ";
-            os << "[" << PV(v_index, x->incoming_values[i].value) << ", %_"
+            os << "[" << PV(value_index, x->incoming_values[i].value) << ", %_"
                << bb_index.find(x->IncomingBbs()[i])->second << "]";
           }
           os << '\n';
         } else if (auto* x = dyn_cast<MemOpInst>(inst)) {
-          os << "; mem" << v_index.get(x) << " for load@" << x->load << ", use "
-             << PV(v_index, x->mem_token.value) << '\n';
+          os << "; mem" << value_index.Get(x) << " for load@" << x->load
+             << ", use " << PV(value_index, x->mem_token.value) << '\n';
         } else {
           UNREACHABLE();
         }

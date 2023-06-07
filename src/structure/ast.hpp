@@ -91,10 +91,10 @@ struct Decl {
   // fill in the type check phase
   std::vector<Expr*> flatten_init_list;
 
-  // ast->ir阶段赋值，每个Decl拥有属于自己的Value，Value
-  // *的地址相等等价于指向同一个的变量
-  // 一开始全局变量：GlobalRef，参数中的数组：ParamRef，参数中的int/局部变量：AllocaInst
-  // 经过mem2reg后，参数和局部变量中的int将不再需要这个AllocaInst
+  // fill in the ConvertSSA phase
+  // global variable: GlobalRef
+  // array in parameter: ParamRef
+  // int in parameter/local variable: AllocaInst
   Value* value;
 
   [[nodiscard]] bool IsParamArray() const { return !dims.empty() && !dims[0]; }
