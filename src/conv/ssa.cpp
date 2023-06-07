@@ -247,41 +247,28 @@ void ConvertStmt(SSAContext* ctx, Stmt* stmt) {
     // modify the context basic block
     ctx->bb = bb_end;
   } else if (auto* x = dyn_cast<While>(stmt)) {
-    // four bb:
-    // cond1: loop or end
-    // loop: cond2
-    // cond2 : loop or end
-    // end
-    auto* bb_cond1 = new BasicBlock;
+    // 1. check `cond`
+    // 2. branch to `loop` or `end`
+    // 3. jump to `cond` at the end of `loop`
+    auto* bb_cond = new BasicBlock;
     auto* bb_loop = new BasicBlock;
-    auto* bb_cond2 = new BasicBlock;
     auto* bb_end = new BasicBlock;
-    ctx->func->bb.InsertAtEnd(bb_cond1);
+
+    ctx->func->bb.InsertAtEnd(bb_cond);
     ctx->func->bb.InsertAtEnd(bb_loop);
 
-    // jump to cond1 bb
-    new JumpInst(bb_cond1, ctx->bb);
-
-    // cond1
-    ctx->bb = bb_cond1;
+    new JumpInst(bb_cond, ctx->bb);
+    ctx->bb = bb_cond;
     auto* cond = ConvertExpr(ctx, x->cond);
     new BranchInst(cond, bb_loop, bb_end, ctx->bb);
 
-    // loop
     ctx->bb = bb_loop;
-    ctx->loop_stk.emplace_back(bb_cond2, bb_end);
+    ctx->loop_stk.emplace_back(bb_cond, bb_end);
     ConvertStmt(ctx, x->body);
     ctx->loop_stk.pop_back();
-    // jump to cond2 bb
     if (!ctx->bb->Valid()) {
-      new JumpInst(bb_cond2, ctx->bb);
+      new JumpInst(bb_cond, ctx->bb);
     }
-
-    // cond2
-    ctx->func->bb.InsertAtEnd(bb_cond2);
-    ctx->bb = bb_cond2;
-    cond = ConvertExpr(ctx, x->cond);
-    new BranchInst(cond, bb_loop, bb_end, ctx->bb);
 
     ctx->func->bb.InsertAtEnd(bb_end);
     ctx->bb = bb_end;
