@@ -23,7 +23,7 @@ Value* convert_expr(SsaContext* ctx, Expr* expr) {
       return remainder;
     } else if (x->tag == Expr::And || x->tag == Expr::Or) {
       auto rhs_bb = new BasicBlock, after_bb = new BasicBlock;
-      ctx->func->bb.insertAtEnd(rhs_bb);
+      ctx->func->bb.InsertAtEnd(rhs_bb);
       if (x->tag == Expr::And) {
         new BranchInst(lhs, rhs_bb, after_bb, ctx->bb);
       } else {
@@ -38,7 +38,7 @@ Value* convert_expr(SsaContext* ctx, Expr* expr) {
       ctx->bb = rhs_bb;
       auto rhs = convert_expr(ctx, x->rhs);
       new JumpInst(after_bb, ctx->bb);
-      ctx->func->bb.insertAtEnd(after_bb);
+      ctx->func->bb.InsertAtEnd(after_bb);
       ctx->bb = after_bb;
       auto inst = new PhiInst(ctx->bb);
       inst->incoming_values[0].set(lhs);
@@ -228,9 +228,9 @@ void convert_stmt(SsaContext* ctx, Stmt* stmt) {
     BasicBlock* bb_then = new BasicBlock;
     BasicBlock* bb_else = new BasicBlock;
     BasicBlock* bb_end = new BasicBlock;
-    ctx->func->bb.insertAtEnd(bb_then);
-    ctx->func->bb.insertAtEnd(bb_else);
-    ctx->func->bb.insertAtEnd(bb_end);
+    ctx->func->bb.InsertAtEnd(bb_then);
+    ctx->func->bb.InsertAtEnd(bb_else);
+    ctx->func->bb.InsertAtEnd(bb_end);
 
     new BranchInst(cond, bb_then, bb_else, ctx->bb);
 
@@ -262,8 +262,8 @@ void convert_stmt(SsaContext* ctx, Stmt* stmt) {
     BasicBlock* bb_loop = new BasicBlock;
     BasicBlock* bb_cond2 = new BasicBlock;
     BasicBlock* bb_end = new BasicBlock;
-    ctx->func->bb.insertAtEnd(bb_cond1);
-    ctx->func->bb.insertAtEnd(bb_loop);
+    ctx->func->bb.InsertAtEnd(bb_cond1);
+    ctx->func->bb.InsertAtEnd(bb_loop);
 
     // jump to cond1 bb
     new JumpInst(bb_cond1, ctx->bb);
@@ -284,12 +284,12 @@ void convert_stmt(SsaContext* ctx, Stmt* stmt) {
     }
 
     // cond2
-    ctx->func->bb.insertAtEnd(bb_cond2);
+    ctx->func->bb.InsertAtEnd(bb_cond2);
     ctx->bb = bb_cond2;
     cond = convert_expr(ctx, x->cond);
     new BranchInst(cond, bb_loop, bb_end, ctx->bb);
 
-    ctx->func->bb.insertAtEnd(bb_end);
+    ctx->func->bb.InsertAtEnd(bb_end);
     ctx->bb = bb_end;
   } else if (auto x = dyn_cast<Block>(stmt)) {
     for (auto& stmt : x->stmts) {
@@ -316,14 +316,14 @@ void convert_stmt(SsaContext* ctx, Stmt* stmt) {
   }
 }
 
-IrProgram* convert_ssa(Program& p) {
+IrProgram* ConvertSSA(Program& p) {
   IrProgram* ret = new IrProgram;
   for (Func& builtin : Func::builtin_function) {
     IrFunc* func = new IrFunc;
     func->builtin = true;
     func->func = &builtin;
     builtin.val = func;
-    ret->func.insertAtEnd(func);
+    ret->func.InsertAtEnd(func);
   }
   for (auto& g : p.glob) {
     if (Func* f = std::get_if<0>(&g)) {
@@ -331,14 +331,14 @@ IrProgram* convert_ssa(Program& p) {
       func->builtin = false;
       func->func = f;
       f->val = func;
-      ret->func.insertAtEnd(func);
+      ret->func.InsertAtEnd(func);
     }
   }
   for (auto& g : p.glob) {
     if (Func* f = std::get_if<0>(&g)) {
       IrFunc* func = f->val;
       BasicBlock* entryBB = new BasicBlock;
-      func->bb.insertAtEnd(entryBB);
+      func->bb.InsertAtEnd(entryBB);
 
       // setup params
       for (auto& p : f->params) {

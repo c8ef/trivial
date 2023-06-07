@@ -99,7 +99,7 @@ bool remove_useless_loop(IrFunc* f) {
       for (Inst* i = bb->insts.head; i; i = i->next) {
         for (auto [it, end] = i->operands(); it < end; ++it) it->set(nullptr);
       }
-      f->bb.remove(bb);
+      f->bb.Remove(bb);
       delete bb;
     }
   fail:;

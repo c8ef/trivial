@@ -148,9 +148,9 @@ static void try_fold_lhs(BinaryInst* x) {
 // 把 i 放到 new_bb 的末尾。这个 bb 中的位置不重要，因为后续还会再调整它在 bb
 // 中的位置
 static void transfer_inst(Inst* i, BasicBlock* new_bb) {
-  i->bb->insts.remove(i);
+  i->bb->insts.Remove(i);
   i->bb = new_bb;
-  new_bb->insts.insertBefore(i, new_bb->insts.tail);
+  new_bb->insts.InsertBefore(i, new_bb->insts.tail);
 }
 
 // 目前只考虑移动 BinaryInst 的位置，其他都不允许移动
@@ -249,8 +249,8 @@ static void schedule_late(std::unordered_set<Inst*>& vis, LoopInfo& info,
         if (!isa<PhiInst>(j)) {
           for (Use* u = i->uses.head; u; u = u->next) {
             if (u->user == j) {
-              best->insts.remove(i);
-              best->insts.insertBefore(i, j);
+              best->insts.Remove(i);
+              best->insts.InsertBefore(i, j);
               goto out;
             }
           }
@@ -276,7 +276,7 @@ again:
   auto replace = [&vn](Inst* o, Value* n) {
     if (o != n) {
       o->replaceAllUseWith(n);
-      o->bb->insts.remove(o);
+      o->bb->insts.Remove(o);
       auto it = std::find_if(
           vn.begin(), vn.end(),
           [o](std::pair<Value*, Value*> kv) { return kv.first == o; });
@@ -375,8 +375,8 @@ again:
         auto c = static_cast<Inst*>(x->cond.value);
         if (c->bb == bb &&
             c->uses.head == c->uses.tail) {  // 要求只被这个 branch 使用
-          bb->insts.remove(c);
-          bb->insts.insertBefore(c, x);
+          bb->insts.Remove(c);
+          bb->insts.InsertBefore(c, x);
         }
       }
     }

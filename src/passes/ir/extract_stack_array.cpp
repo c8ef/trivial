@@ -108,14 +108,14 @@ void extract_stack_array(IrProgram* p) {
               p->glob_decl.push_back(extracted_decl);
               // remove memset
               if (memset) {
-                memset->bb->insts.remove(memset);
+                memset->bb->insts.Remove(memset);
                 delete memset;
               }
               // replace all use to global ref
               alloc->replaceAllUseWith(extracted_decl->value);
               // remove all stores
               for (auto& s : stores) {
-                s->bb->insts.remove(s);
+                s->bb->insts.Remove(s);
                 delete s;
               }
               delete_list.insert(alloc);
@@ -127,7 +127,7 @@ void extract_stack_array(IrProgram* p) {
     }
     // delete extracted AllocaInst
     for (auto alloc : delete_list) {
-      alloc->bb->insts.remove(alloc);
+      alloc->bb->insts.Remove(alloc);
       delete alloc;
     }
   }

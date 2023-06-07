@@ -26,9 +26,9 @@ using u64 = uint64_t;
 #define DEFINE_CLASSOF(cls, cond) \
   static bool classof(const cls* p) { return cond; }
 
-#define DEFINE_ILIST(cls) \
-  cls* prev;              \
-  cls* next;
+#define DEFINE_LIST(type) \
+  type* prev;             \
+  type* next;
 
 template <class T>
 struct IndexMapper {
@@ -56,76 +56,71 @@ inline bool can_encode_imm(i32 imm) {
   return false;
 }
 
-template <class Node>
-struct ilist {
+template <typename Node>
+struct IntrusiveList {
   Node* head;
   Node* tail;
 
-  ilist() { head = tail = nullptr; }
+  IntrusiveList() { head = tail = nullptr; }
 
-  // insert newNode before insertBefore
-  void insertBefore(Node* newNode, Node* insertBefore) {
-    newNode->prev = insertBefore->prev;
-    newNode->next = insertBefore;
-    if (insertBefore->prev) {
-      insertBefore->prev->next = newNode;
+  void InsertBefore(Node* new_node, Node* insert_before) {
+    new_node->prev = insert_before->prev;
+    new_node->next = insert_before;
+    if (insert_before->prev) {
+      insert_before->prev->next = new_node;
     }
-    insertBefore->prev = newNode;
+    insert_before->prev = new_node;
 
-    if (head == insertBefore) {
-      head = newNode;
-    }
-  }
-
-  // insert newNode after insertAfter
-  void insertAfter(Node* newNode, Node* insertAfter) {
-    newNode->prev = insertAfter;
-    newNode->next = insertAfter->next;
-    if (insertAfter->next) {
-      insertAfter->next->prev = newNode;
-    }
-    insertAfter->next = newNode;
-
-    if (tail == insertAfter) {
-      tail = newNode;
+    if (head == insert_before) {
+      head = new_node;
     }
   }
 
-  // insert newNode at the end of ilist
-  void insertAtEnd(Node* newNode) {
-    newNode->prev = tail;
-    newNode->next = nullptr;
+  void InsertAfter(Node* new_node, Node* insert_after) {
+    new_node->prev = insert_after;
+    new_node->next = insert_after->next;
+    if (insert_after->next) {
+      insert_after->next->prev = new_node;
+    }
+    insert_after->next = new_node;
 
-    if (tail == nullptr) {
-      head = tail = newNode;
+    if (tail == insert_after) {
+      tail = new_node;
+    }
+  }
+
+  void InsertAtEnd(Node* new_node) {
+    new_node->prev = tail;
+    new_node->next = nullptr;
+
+    if (!tail) {
+      head = tail = new_node;
     } else {
-      tail->next = newNode;
-      tail = newNode;
+      tail->next = new_node;
+      tail = new_node;
     }
   }
 
-  // insert newNode at the begin of ilist
-  void insertAtBegin(Node* newNode) {
-    newNode->prev = nullptr;
-    newNode->next = head;
+  void InsertAtBegin(Node* new_node) {
+    new_node->prev = nullptr;
+    new_node->next = head;
 
-    if (head == nullptr) {
-      head = tail = newNode;
+    if (!head) {
+      head = tail = new_node;
     } else {
-      head->prev = newNode;
-      head = newNode;
+      head->prev = new_node;
+      head = new_node;
     }
   }
 
-  // remove node from ilist
-  void remove(Node* node) {
-    if (node->prev != nullptr) {
+  void Remove(Node* node) {
+    if (node->prev) {
       node->prev->next = node->next;
     } else {
       head = node->next;
     }
 
-    if (node->next != nullptr) {
+    if (node->next) {
       node->next->prev = node->prev;
     } else {
       tail = node->prev;

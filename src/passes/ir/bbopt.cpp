@@ -32,7 +32,7 @@ bool bbopt(IrFunc* f) {
           changed = true;  // 可能引入新的以 jump 结尾的空基本块
         }
         if (deleted) {
-          bb->insts.remove(x);
+          bb->insts.Remove(x);
           delete x;
           u32 idx = std::find(deleted->pred.begin(), deleted->pred.end(), bb) -
                     deleted->pred.begin();
@@ -86,7 +86,7 @@ bool bbopt(IrFunc* f) {
           } else
             break;
         }
-        f->bb.remove(bb);
+        f->bb.Remove(bb);
         delete bb;
         changed = true;
       }
@@ -119,7 +119,7 @@ bool bbopt(IrFunc* f) {
   for (BasicBlock* bb = f->bb.head; bb;) {
     BasicBlock* next = bb->next;
     if (!bb->vis) {
-      f->bb.remove(bb);
+      f->bb.Remove(bb);
       delete bb;
     }
     bb = next;
@@ -135,7 +135,7 @@ bool bbopt(IrFunc* f) {
           inst_changed = true;
           assert(x->incoming_values.size() == 1);
           x->replaceAllUseWith(x->incoming_values[0].value);
-          bb->insts.remove(x);
+          bb->insts.Remove(x);
           delete x;
         } else
           break;
@@ -153,19 +153,19 @@ bool bbopt(IrFunc* f) {
         assert(!isa<PhiInst>(target->insts.head));
         for (Inst* i = target->insts.head; i;) {
           Inst* next = i->next;
-          target->insts.remove(i);
-          bb->insts.insertBefore(i, x);
+          target->insts.Remove(i);
+          bb->insts.InsertBefore(i, x);
           i->bb = bb;
           i = next;
         }
-        bb->insts.remove(x);
+        bb->insts.Remove(x);
         delete x;
         for (BasicBlock* s : bb->succ()) {
           if (s) {
             *std::find(s->pred.begin(), s->pred.end(), target) = bb;
           }
         }
-        f->bb.remove(target);
+        f->bb.Remove(target);
         delete target;
         goto again;
       }

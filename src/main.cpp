@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
   TypeCheck(program);
   spdlog::debug("type check success");
 
-  auto* ir = convert_ssa(program);
+  auto* ir = ConvertSSA(program);
   run_passes(ir);
   if (!ir_file.empty()) {
     std::ofstream(ir_file) << *ir;

@@ -8,7 +8,7 @@ void remove_unused_function(IrProgram* p) {
       auto remove_func = "Function " + std::string(f->func->name) +
                          " not used thus removed from IR";
       dbg(remove_func);
-      p->func.remove(f);
+      p->func.Remove(f);
     }
   }
 }

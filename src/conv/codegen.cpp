@@ -10,10 +10,10 @@
 // list of assignments (lhs, rhs)
 using ParMv = std::vector<std::pair<MachineOperand, MachineOperand>>;
 
-static inline void insert_parallel_mv(ParMv& movs, MachineInst* insertBefore) {
+static inline void insert_parallel_mv(ParMv& movs, MachineInst* InsertBefore) {
   // serialization in any order is okay
   for (auto& [lhs, rhs] : movs) {
-    auto inst = new MIMove(insertBefore);
+    auto inst = new MIMove(InsertBefore);
     inst->dst = lhs;
     inst->rhs = rhs;
   }
@@ -57,7 +57,7 @@ MachineProgram* machine_code_generation(IrProgram* p) {
   for (auto f = p->func.head; f; f = f->next) {
     if (f->builtin) continue;
     auto mf = new MachineFunc;
-    ret->func.insertAtEnd(mf);
+    ret->func.InsertAtEnd(mf);
     mf->func = f;
 
     // 1. create machine bb 1-to-1
@@ -65,7 +65,7 @@ MachineProgram* machine_code_generation(IrProgram* p) {
     for (auto bb = f->bb.head; bb; bb = bb->next) {
       auto mbb = new MachineBB;
       mbb->bb = bb;
-      mf->bb.insertAtEnd(mbb);
+      mf->bb.InsertAtEnd(mbb);
       bb_map[bb] = mbb;
     }
     // maintain pred and succ

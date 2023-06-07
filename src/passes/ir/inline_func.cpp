@@ -61,7 +61,7 @@ void inline_func(IrProgram* p) {
       for (BasicBlock* s : x->bb->succ()) {
         if (s) *std::find(s->pred.begin(), s->pred.end(), x->bb) = ret;
       }
-      f->bb.insertAfter(ret, x->bb);
+      f->bb.InsertAfter(ret, x->bb);
       auto get = [&](const Use& u) {
         Value* v = u.value;
         if (auto it = val_map.find(v); it != val_map.end())
@@ -77,7 +77,7 @@ void inline_func(IrProgram* p) {
       for (BasicBlock* bb = callee->bb.head; bb; bb = bb->next) {
         auto cloned = new BasicBlock;
         bb_map.insert({bb, cloned});
-        f->bb.insertBefore(cloned, ret);
+        f->bb.InsertBefore(cloned, ret);
       }
       for (BasicBlock* bb : compute_rpo(callee)) {
         BasicBlock* cloned = bb_map.find(bb)->second;
@@ -139,8 +139,8 @@ void inline_func(IrProgram* p) {
       BasicBlock* bb = x->bb;
       for (Inst* j = x->next; j;) {
         Inst* next = j->next;
-        bb->insts.remove(j);
-        ret->insts.insertAtEnd(j);
+        bb->insts.Remove(j);
+        ret->insts.InsertAtEnd(j);
         j->bb = ret;
         j = next;
       }
@@ -157,7 +157,7 @@ void inline_func(IrProgram* p) {
       } else {
         assert(x->uses.head == nullptr);
       }
-      bb->insts.remove(x);
+      bb->insts.Remove(x);
       delete x;
     }
   }

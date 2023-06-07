@@ -17,7 +17,7 @@ void dead_store_elim(IrFunc* f) {
           else if (auto y = dyn_cast<StoreInst>(j);
                    y && y->lhs_sym == arr && y->arr.value == x->arr.value &&
                    y->index.value == x->index.value) {
-            bb->insts.remove(x);
+            bb->insts.Remove(x);
             delete x;
             break;
           }

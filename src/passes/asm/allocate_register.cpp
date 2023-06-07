@@ -618,7 +618,7 @@ void allocate_register(MachineProgram* p) {
                 store_inst->bb = bb;
                 store_inst->addr = MachineOperand::R(ArmReg::sp);
                 store_inst->shift = 0;
-                bb->insts.insertAfter(store_inst, last_def);
+                bb->insts.InsertAfter(store_inst, last_def);
                 generate_access_offset(store_inst);
                 store_inst->data = MachineOperand::V(vreg);
                 last_def = nullptr;

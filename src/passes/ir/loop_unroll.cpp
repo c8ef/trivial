@@ -69,7 +69,7 @@ void loop_unroll(IrFunc* f) {
       auto jump = dyn_cast<JumpInst>(bb_cond->insts.tail);
       if (!jump || jump->next != bb_body || bb_end->pred.size() != 1) continue;
       assert(!isa<PhiInst>(bb_end->insts.head));
-      bb_cond->insts.remove(jump);
+      bb_cond->insts.Remove(jump);
       delete jump;
       br0 = new BranchInst(ConstValue::get(1), bb_body, bb_end, bb_cond);
       bb_end->pred.push_back(bb_cond);
@@ -203,7 +203,7 @@ void loop_unroll(IrFunc* f) {
     }
 
     Value* old_n = (&cond->lhs)[!cond_ix].value;
-    bb_body->insts.remove(br);  // 后面需要往 bb_body 的最后
+    bb_body->insts.Remove(br);  // 后面需要往 bb_body 的最后
                                 // insert，所以先把跳转指令去掉，等下再加回来
     Inst* orig_last =
         bb_body->insts
@@ -246,7 +246,7 @@ void loop_unroll(IrFunc* f) {
         if (auto x = dyn_cast<PhiInst>(i)) {
           Inst* next = x->next;
           x->replaceAllUseWith(x->incoming_values[!idx_in_body].value);
-          bb_body->insts.remove(x);
+          bb_body->insts.Remove(x);
           delete x;
           i = next;
         } else
@@ -266,7 +266,7 @@ void loop_unroll(IrFunc* f) {
       clone_inst(i, bb_body, map);
       if (i == orig_last) break;
     }
-    bb_body->insts.insertAtEnd(br);
+    bb_body->insts.InsertAtEnd(br);
 
     Value* new_ix =
         new BinaryInst(Value::Tag::Add, get((&cond->lhs)[cond_ix].value),
@@ -277,8 +277,8 @@ void loop_unroll(IrFunc* f) {
 
     auto bb_if = new BasicBlock;
     auto bb_last = new BasicBlock;
-    f->bb.insertAfter(bb_if, bb_body);
-    f->bb.insertAfter(bb_last, bb_if);
+    f->bb.InsertAfter(bb_if, bb_body);
+    f->bb.InsertAfter(bb_last, bb_if);
     br0->right = bb_if, bb_if->pred.push_back(bb_cond);
     br->right = bb_if, bb_if->pred.push_back(bb_body);
     bb_last->pred.push_back(bb_if);

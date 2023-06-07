@@ -290,7 +290,7 @@ void instruction_schedule(MachineFunc* f) {
         for (auto& f : units) {
           if (f.kind == kind && f.inflight == nullptr) {
             // fire!
-            bb->insts.insertAtEnd(inst->inst);
+            bb->insts.InsertAtEnd(inst->inst);
             num_inflight++;
             f.inflight = inst;
             f.complete_cycle = cycle + inst->latency;

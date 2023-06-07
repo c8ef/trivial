@@ -104,7 +104,7 @@ void clear_memdep(IrFunc* f) {
     for (Inst* i = bb->insts.head; i;) {
       Inst* next = i->next;
       if (auto x = dyn_cast<MemOpInst>(i)) {
-        bb->insts.remove(x);
+        bb->insts.Remove(x);
         delete x;
       }
       i = next;
@@ -284,7 +284,7 @@ void compute_memdep(IrFunc* f) {
       for (Inst* i = bb->mem_phis.head; i;) {
         Inst* next = i->next;
         if (i->uses.head == nullptr) {
-          bb->mem_phis.remove(i);
+          bb->mem_phis.Remove(i);
           delete static_cast<MemPhiInst*>(i);
           changed = true;
         }

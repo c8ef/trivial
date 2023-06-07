@@ -25,7 +25,7 @@ struct MemPhiInst;
 
 struct Value {
   // value is used by ...
-  ilist<Use> uses;
+  IntrusiveList<Use> uses;
   // tag
   enum class Tag {
     // Binary Operator Start
@@ -63,8 +63,8 @@ struct Value {
 
   Value(Tag tag) : tag(tag) {}
 
-  void addUse(Use* u) { uses.insertAtEnd(u); }
-  void killUse(Use* u) { uses.remove(u); }
+  void addUse(Use* u) { uses.InsertAtEnd(u); }
+  void killUse(Use* u) { uses.Remove(u); }
 
   // 将对自身所有的使用替换成对v的使用
   inline void replaceAllUseWith(Value* v);
@@ -73,7 +73,7 @@ struct Value {
 };
 
 struct Use {
-  DEFINE_ILIST(Use)
+  DEFINE_LIST(Use)
 
   Value* value;
   Inst* user;
@@ -116,14 +116,14 @@ void Value::replaceAllUseWith(Value* v) {
 }
 
 struct IrProgram {
-  ilist<IrFunc> func;
+  IntrusiveList<IrFunc> func;
   std::vector<Decl*> glob_decl;
 };
 
 std::ostream& operator<<(std::ostream& os, const IrProgram& dt);
 
 struct BasicBlock {
-  DEFINE_ILIST(BasicBlock)
+  DEFINE_LIST(BasicBlock)
   std::vector<BasicBlock*> pred;
   BasicBlock* idom;
   std::unordered_set<BasicBlock*> dom_by;  // 支配它的节点集
@@ -131,8 +131,8 @@ struct BasicBlock {
   u32 dom_level;                           // dom树中的深度，根深度为0
   bool
       vis;  // 各种算法中用到，标记是否访问过，算法开头应把所有vis置false(调用IrFunc::clear_all_vis)
-  ilist<Inst> insts;
-  ilist<Inst> mem_phis;  // 元素都是MemPhiInst
+  IntrusiveList<Inst> insts;
+  IntrusiveList<Inst> mem_phis;  // 元素都是MemPhiInst
 
   inline std::array<BasicBlock*, 2> succ();
   inline std::array<BasicBlock**, 2> succ_ref();  // 想修改succ时使用
@@ -140,9 +140,9 @@ struct BasicBlock {
 };
 
 struct IrFunc {
-  DEFINE_ILIST(IrFunc)
+  DEFINE_LIST(IrFunc)
   Func* func;
-  ilist<BasicBlock> bb;
+  IntrusiveList<BasicBlock> bb;
   // functions called by this function
   std::set<IrFunc*> callee_func;
   // functions calling this function
@@ -206,18 +206,18 @@ struct UndefValue : Value {
 struct Inst : Value {
   DEFINE_CLASSOF(Value, Tag::Add <= p->tag && p->tag <= Tag::MemPhi);
   // instruction linked list
-  DEFINE_ILIST(Inst)
+  DEFINE_LIST(Inst)
   // basic block
   BasicBlock* bb;
 
-  // insert this inst before `insertBefore`
-  Inst(Tag tag, Inst* insertBefore) : Value(tag), bb(insertBefore->bb) {
-    bb->insts.insertBefore(this, insertBefore);
+  // insert this inst before `InsertBefore`
+  Inst(Tag tag, Inst* InsertBefore) : Value(tag), bb(InsertBefore->bb) {
+    bb->insts.InsertBefore(this, InsertBefore);
   }
 
-  // insert this inst at the end of `insertAtEnd`
-  Inst(Tag tag, BasicBlock* insertAtEnd) : Value(tag), bb(insertAtEnd) {
-    bb->insts.insertAtEnd(this);
+  // insert this inst at the end of `InsertAtEnd`
+  Inst(Tag tag, BasicBlock* InsertAtEnd) : Value(tag), bb(InsertAtEnd) {
+    bb->insts.InsertAtEnd(this);
   }
 
   // 只初始化tag，没有加入到链表中，调用者手动加入
@@ -236,11 +236,11 @@ struct BinaryInst : Inst {
   Use lhs;
   Use rhs;
 
-  BinaryInst(Tag tag, Value* lhs, Value* rhs, BasicBlock* insertAtEnd)
-      : Inst(tag, insertAtEnd), lhs(lhs, this), rhs(rhs, this) {}
+  BinaryInst(Tag tag, Value* lhs, Value* rhs, BasicBlock* InsertAtEnd)
+      : Inst(tag, InsertAtEnd), lhs(lhs, this), rhs(rhs, this) {}
 
-  BinaryInst(Tag tag, Value* lhs, Value* rhs, Inst* insertBefore)
-      : Inst(tag, insertBefore), lhs(lhs, this), rhs(rhs, this) {}
+  BinaryInst(Tag tag, Value* lhs, Value* rhs, Inst* InsertBefore)
+      : Inst(tag, InsertBefore), lhs(lhs, this), rhs(rhs, this) {}
 
   bool rhsCanBeImm() {
     // Add, Sub, Rsb, Mul, Div, Mod, Lt, Le, Ge, Gt, Eq, Ne, And, Or
@@ -327,8 +327,8 @@ struct BranchInst : Inst {
   BasicBlock* right;
 
   BranchInst(Value* cond, BasicBlock* left, BasicBlock* right,
-             BasicBlock* insertAtEnd)
-      : Inst(Tag::Branch, insertAtEnd),
+             BasicBlock* InsertAtEnd)
+      : Inst(Tag::Branch, InsertAtEnd),
         cond(cond, this),
         left(left),
         right(right) {}
@@ -338,16 +338,16 @@ struct JumpInst : Inst {
   DEFINE_CLASSOF(Value, p->tag == Tag::Jump);
   BasicBlock* next;
 
-  JumpInst(BasicBlock* next, BasicBlock* insertAtEnd)
-      : Inst(Tag::Jump, insertAtEnd), next(next) {}
+  JumpInst(BasicBlock* next, BasicBlock* InsertAtEnd)
+      : Inst(Tag::Jump, InsertAtEnd), next(next) {}
 };
 
 struct ReturnInst : Inst {
   DEFINE_CLASSOF(Value, p->tag == Tag::Return);
   Use ret;
 
-  ReturnInst(Value* ret, BasicBlock* insertAtEnd)
-      : Inst(Tag::Return, insertAtEnd), ret(ret, this) {}
+  ReturnInst(Value* ret, BasicBlock* InsertAtEnd)
+      : Inst(Tag::Return, InsertAtEnd), ret(ret, this) {}
 };
 
 struct AccessInst : Inst {
@@ -357,8 +357,8 @@ struct AccessInst : Inst {
   Use arr;
   Use index;
   AccessInst(Inst::Tag tag, Decl* lhs_sym, Value* arr, Value* index,
-             BasicBlock* insertAtEnd)
-      : Inst(tag, insertAtEnd),
+             BasicBlock* InsertAtEnd)
+      : Inst(tag, InsertAtEnd),
         lhs_sym(lhs_sym),
         arr(arr, this),
         index(index, this) {}
@@ -368,16 +368,16 @@ struct GetElementPtrInst : AccessInst {
   DEFINE_CLASSOF(Value, p->tag == Tag::GetElementPtr);
   int multiplier;
   GetElementPtrInst(Decl* lhs_sym, Value* arr, Value* index, int multiplier,
-                    BasicBlock* insertAtEnd)
-      : AccessInst(Tag::GetElementPtr, lhs_sym, arr, index, insertAtEnd),
+                    BasicBlock* InsertAtEnd)
+      : AccessInst(Tag::GetElementPtr, lhs_sym, arr, index, InsertAtEnd),
         multiplier(multiplier) {}
 };
 
 struct LoadInst : AccessInst {
   DEFINE_CLASSOF(Value, p->tag == Tag::Load);
   Use mem_token;  // 由memdep pass计算
-  LoadInst(Decl* lhs_sym, Value* arr, Value* index, BasicBlock* insertAtEnd)
-      : AccessInst(Tag::Load, lhs_sym, arr, index, insertAtEnd),
+  LoadInst(Decl* lhs_sym, Value* arr, Value* index, BasicBlock* InsertAtEnd)
+      : AccessInst(Tag::Load, lhs_sym, arr, index, InsertAtEnd),
         mem_token(nullptr, this) {}
 };
 
@@ -385,8 +385,8 @@ struct StoreInst : AccessInst {
   DEFINE_CLASSOF(Value, p->tag == Tag::Store);
   Use data;
   StoreInst(Decl* lhs_sym, Value* arr, Value* data, Value* index,
-            BasicBlock* insertAtEnd)
-      : AccessInst(Tag::Store, lhs_sym, arr, index, insertAtEnd),
+            BasicBlock* InsertAtEnd)
+      : AccessInst(Tag::Store, lhs_sym, arr, index, InsertAtEnd),
         data(data, this) {}
 };
 
@@ -394,16 +394,16 @@ struct CallInst : Inst {
   DEFINE_CLASSOF(Value, p->tag == Tag::Call);
   IrFunc* func;
   std::vector<Use> args;
-  CallInst(IrFunc* func, BasicBlock* insertAtEnd)
-      : Inst(Tag::Call, insertAtEnd), func(func) {}
+  CallInst(IrFunc* func, BasicBlock* InsertAtEnd)
+      : Inst(Tag::Call, InsertAtEnd), func(func) {}
 };
 
 struct AllocaInst : Inst {
   DEFINE_CLASSOF(Value, p->tag == Tag::Alloca);
 
   Decl* sym;
-  AllocaInst(Decl* sym, BasicBlock* insertBefore)
-      : Inst(Tag::Alloca, insertBefore), sym(sym) {}
+  AllocaInst(Decl* sym, BasicBlock* InsertBefore)
+      : Inst(Tag::Alloca, InsertBefore), sym(sym) {}
 };
 
 struct PhiInst : Inst {
@@ -413,7 +413,7 @@ struct PhiInst : Inst {
 
   explicit PhiInst(BasicBlock* insertAtFront) : Inst(Tag::Phi) {
     bb = insertAtFront;
-    bb->insts.insertAtBegin(this);
+    bb->insts.InsertAtBegin(this);
     u32 n = incoming_bbs().size();
     incoming_values.reserve(n);
     for (u32 i = 0; i < n; ++i) {
@@ -423,7 +423,7 @@ struct PhiInst : Inst {
     }
   }
 
-  explicit PhiInst(Inst* insertBefore) : Inst(Tag::Phi, insertBefore) {
+  explicit PhiInst(Inst* InsertBefore) : Inst(Tag::Phi, InsertBefore) {
     u32 n = incoming_bbs().size();
     incoming_values.reserve(n);
     for (u32 i = 0; i < n; ++i) {
@@ -436,8 +436,8 @@ struct MemOpInst : Inst {
   DEFINE_CLASSOF(Value, p->tag == Tag::MemOp);
   Use mem_token;
   LoadInst* load;
-  MemOpInst(LoadInst* load, Inst* insertBefore)
-      : Inst(Tag::MemOp, insertBefore), mem_token(nullptr, this), load(load) {}
+  MemOpInst(LoadInst* load, Inst* InsertBefore)
+      : Inst(Tag::MemOp, InsertBefore), mem_token(nullptr, this), load(load) {}
 };
 
 // 它的前几个字段和PhiInst是兼容的，所以可以当成PhiInst用(也许理论上有隐患，但是实际上应该没有问题)
@@ -455,7 +455,7 @@ struct MemPhiInst : Inst {
   explicit MemPhiInst(void* load_or_arr, BasicBlock* insertAtFront)
       : Inst(Tag::MemPhi), load_or_arr(load_or_arr) {
     bb = insertAtFront;
-    bb->mem_phis.insertAtBegin(this);
+    bb->mem_phis.InsertAtBegin(this);
     u32 n = incoming_bbs().size();
     incoming_values.reserve(n);
     for (u32 i = 0; i < n; ++i) {

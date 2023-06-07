@@ -31,7 +31,7 @@ again:
     for (Inst* i = bb->insts.head; i;) {
       Inst* next = i->next;
       if (vis.find(i) == vis.end()) {
-        bb->insts.remove(i);
+        bb->insts.Remove(i);
         i->deleteValue();
       }
       i = next;

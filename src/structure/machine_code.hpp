@@ -128,7 +128,7 @@ inline std::ostream& operator<<(std::ostream& os, const ArmCond& cond) {
 }
 
 struct MachineProgram {
-  ilist<MachineFunc> func;
+  IntrusiveList<MachineFunc> func;
   std::vector<Decl*> glob_decl;
   friend std::ostream& operator<<(std::ostream& os, const MachineProgram& dt);
 };
@@ -136,8 +136,8 @@ struct MachineProgram {
 std::ostream& operator<<(std::ostream& os, const MachineProgram& dt);
 
 struct MachineFunc {
-  DEFINE_ILIST(MachineFunc)
-  ilist<MachineBB> bb;
+  DEFINE_LIST(MachineFunc)
+  IntrusiveList<MachineBB> bb;
   IrFunc* func;
   // number of virtual registers allocated
   u32 virtual_max = 0;
@@ -152,9 +152,9 @@ struct MachineFunc {
 };
 
 struct MachineBB {
-  DEFINE_ILIST(MachineBB)
+  DEFINE_LIST(MachineBB)
   BasicBlock* bb;
-  ilist<MachineInst> insts;
+  IntrusiveList<MachineInst> insts;
   // predecessor and successor
   std::vector<MachineBB*> pred;
   std::array<MachineBB*, 2> succ;
@@ -273,7 +273,7 @@ struct hash<std::pair<MachineOperand, MachineOperand>> {
 }  // namespace std
 
 struct MachineInst {
-  DEFINE_ILIST(MachineInst)
+  DEFINE_LIST(MachineInst)
   MachineBB* bb;
 
   enum class Tag {
@@ -307,15 +307,15 @@ struct MachineInst {
     Comment,  // for printing comments
   } tag;
 
-  MachineInst(Tag tag, MachineBB* insertAtEnd) : bb(insertAtEnd), tag(tag) {
-    if (insertAtEnd) {
-      insertAtEnd->insts.insertAtEnd(this);
+  MachineInst(Tag tag, MachineBB* InsertAtEnd) : bb(InsertAtEnd), tag(tag) {
+    if (InsertAtEnd) {
+      InsertAtEnd->insts.InsertAtEnd(this);
     }
   }
-  MachineInst(Tag tag, MachineInst* insertBefore)
-      : bb(insertBefore->bb), tag(tag) {
+  MachineInst(Tag tag, MachineInst* InsertBefore)
+      : bb(InsertBefore->bb), tag(tag) {
     if (bb) {
-      bb->insts.insertBefore(this, insertBefore);
+      bb->insts.InsertBefore(this, InsertBefore);
     }
   }
   MachineInst(Tag tag) : tag(tag) {}
@@ -329,7 +329,7 @@ struct MIBinary : MachineInst {
   MachineOperand rhs;
   ArmShift shift;
 
-  MIBinary(Tag tag, MachineBB* insertAtEnd) : MachineInst(tag, insertAtEnd) {}
+  MIBinary(Tag tag, MachineBB* InsertAtEnd) : MachineInst(tag, InsertAtEnd) {}
 
   bool isIdentity() {
     switch (tag) {
@@ -349,16 +349,16 @@ struct MIQuaternary : MachineInst {
   MachineOperand lhs;
   MachineOperand rhs;
 
-  MIQuaternary(Tag tag, MachineBB* insertAtEnd)
-      : MachineInst(tag, insertAtEnd) {}
+  MIQuaternary(Tag tag, MachineBB* InsertAtEnd)
+      : MachineInst(tag, InsertAtEnd) {}
 };
 
 struct MILongMul : MIQuaternary {
   DEFINE_CLASSOF(MachineInst, Tag::LongMul == p->tag);
   MachineOperand dst;
 
-  explicit MILongMul(MachineBB* insertAtEnd)
-      : MIQuaternary(Tag::LongMul, insertAtEnd) {}
+  explicit MILongMul(MachineBB* InsertAtEnd)
+      : MIQuaternary(Tag::LongMul, InsertAtEnd) {}
 };
 
 struct MIFma : MIQuaternary {
@@ -369,8 +369,8 @@ struct MIFma : MIQuaternary {
   bool sign;
   ArmCond cond;
 
-  explicit MIFma(bool add, bool sign, MachineBB* insertAtEnd)
-      : MIQuaternary(Tag::FMA, insertAtEnd),
+  explicit MIFma(bool add, bool sign, MachineBB* InsertAtEnd)
+      : MIQuaternary(Tag::FMA, InsertAtEnd),
         add(add),
         sign(sign),
         cond(ArmCond::Any) {}
@@ -387,17 +387,17 @@ struct MIMove : MachineInst {
     return cond == ArmCond::Any && shift.type == ArmShift::None;
   }
 
-  MIMove(MachineBB* insertAtEnd)
-      : MachineInst(Tag::Mv, insertAtEnd), cond(ArmCond::Any) {}
-  MIMove(MachineBB* insertAtBegin, int)
+  MIMove(MachineBB* InsertAtEnd)
+      : MachineInst(Tag::Mv, InsertAtEnd), cond(ArmCond::Any) {}
+  MIMove(MachineBB* InsertAtBegin, int)
       : MachineInst(Tag::Mv), cond(ArmCond::Any) {
-    if (insertAtBegin) {
-      bb = insertAtBegin;
-      insertAtBegin->insts.insertAtBegin(this);
+    if (InsertAtBegin) {
+      bb = InsertAtBegin;
+      InsertAtBegin->insts.InsertAtBegin(this);
     }
   }
-  MIMove(MachineInst* insertBefore)
-      : MachineInst(Tag::Mv, insertBefore), cond(ArmCond::Any) {}
+  MIMove(MachineInst* InsertBefore)
+      : MachineInst(Tag::Mv, InsertBefore), cond(ArmCond::Any) {}
 };
 
 struct MIMoveCompare {
@@ -413,20 +413,20 @@ struct MIBranch : MachineInst {
   DEFINE_CLASSOF(MachineInst, p->tag == Tag::Branch);
   ArmCond cond;
   MachineBB* target;
-  MIBranch(MachineBB* insertAtEnd) : MachineInst(Tag::Branch, insertAtEnd) {}
+  MIBranch(MachineBB* InsertAtEnd) : MachineInst(Tag::Branch, InsertAtEnd) {}
 };
 
 struct MIJump : MachineInst {
   DEFINE_CLASSOF(MachineInst, p->tag == Tag::Jump);
   MachineBB* target;
 
-  MIJump(MachineBB* target, MachineBB* insertAtEnd)
-      : MachineInst(Tag::Jump, insertAtEnd), target(target) {}
+  MIJump(MachineBB* target, MachineBB* InsertAtEnd)
+      : MachineInst(Tag::Jump, InsertAtEnd), target(target) {}
 };
 
 struct MIReturn : MachineInst {
   DEFINE_CLASSOF(MachineInst, p->tag == Tag::Return);
-  MIReturn(MachineBB* insertAtEnd) : MachineInst(Tag::Return, insertAtEnd) {}
+  MIReturn(MachineBB* InsertAtEnd) : MachineInst(Tag::Return, InsertAtEnd) {}
 };
 
 struct MIAccess : MachineInst {
@@ -440,10 +440,10 @@ struct MIAccess : MachineInst {
   MachineOperand offset;
   i32 shift;
   ArmCond cond;
-  MIAccess(MachineInst::Tag tag, MachineBB* insertAtEnd)
-      : MachineInst(tag, insertAtEnd), cond(ArmCond::Any) {}
-  MIAccess(MachineInst::Tag tag, MachineInst* insertBefore)
-      : MachineInst(tag, insertBefore), cond(ArmCond::Any) {}
+  MIAccess(MachineInst::Tag tag, MachineBB* InsertAtEnd)
+      : MachineInst(tag, InsertAtEnd), cond(ArmCond::Any) {}
+  MIAccess(MachineInst::Tag tag, MachineInst* InsertBefore)
+      : MachineInst(tag, InsertBefore), cond(ArmCond::Any) {}
   MIAccess(MachineInst::Tag tag) : MachineInst(tag), cond(ArmCond::Any) {}
 };
 
@@ -451,11 +451,11 @@ struct MILoad : MIAccess {
   DEFINE_CLASSOF(MachineInst, p->tag == Tag::Load);
   MachineOperand dst;
 
-  MILoad(MachineBB* insertAtEnd) : MIAccess(Tag::Load, insertAtEnd) {}
-  MILoad(MachineInst* insertBefore) : MIAccess(Tag::Load, insertBefore) {}
-  MILoad(MachineBB* insertAtBegin, int) : MIAccess(Tag::Load) {
-    bb = insertAtBegin;
-    insertAtBegin->insts.insertAtBegin(this);
+  MILoad(MachineBB* InsertAtEnd) : MIAccess(Tag::Load, InsertAtEnd) {}
+  MILoad(MachineInst* InsertBefore) : MIAccess(Tag::Load, InsertBefore) {}
+  MILoad(MachineBB* InsertAtBegin, int) : MIAccess(Tag::Load) {
+    bb = InsertAtBegin;
+    InsertAtBegin->insts.InsertAtBegin(this);
   }
 };
 
@@ -463,8 +463,8 @@ struct MIStore : MIAccess {
   DEFINE_CLASSOF(MachineInst, p->tag == Tag::Store);
   MachineOperand data;
 
-  explicit MIStore(MachineBB* insertAtEnd)
-      : MIAccess(Tag::Store, insertAtEnd) {}
+  explicit MIStore(MachineBB* InsertAtEnd)
+      : MIAccess(Tag::Store, InsertAtEnd) {}
   MIStore() : MIAccess(Tag::Store) {}
 };
 
@@ -473,16 +473,16 @@ struct MICompare : MachineInst {
   MachineOperand lhs;
   MachineOperand rhs;
 
-  explicit MICompare(MachineBB* insertAtEnd)
-      : MachineInst(Tag::Compare, insertAtEnd) {}
+  explicit MICompare(MachineBB* InsertAtEnd)
+      : MachineInst(Tag::Compare, InsertAtEnd) {}
 };
 
 struct MICall : MachineInst {
   DEFINE_CLASSOF(MachineInst, p->tag == Tag::Call);
   Func* func;
 
-  explicit MICall(MachineBB* insertAtEnd)
-      : MachineInst(Tag::Call, insertAtEnd) {}
+  explicit MICall(MachineBB* InsertAtEnd)
+      : MachineInst(Tag::Call, InsertAtEnd) {}
 };
 
 struct MIGlobal : MachineInst {
@@ -490,9 +490,9 @@ struct MIGlobal : MachineInst {
   MachineOperand dst;
   Decl* sym;
 
-  MIGlobal(Decl* sym, MachineBB* insertAtBegin)
+  MIGlobal(Decl* sym, MachineBB* InsertAtBegin)
       : MachineInst(Tag::Global), sym(sym) {
-    insertAtBegin->insts.insertAtBegin(this);
+    InsertAtBegin->insts.InsertAtBegin(this);
   }
 };
 
@@ -500,8 +500,8 @@ struct MIComment : MachineInst {
   DEFINE_CLASSOF(MachineInst, p->tag == Tag::Comment);
   std::string content;
 
-  MIComment(std::string&& content, MachineBB* insertAtEnd)
-      : MachineInst(Tag::Comment, insertAtEnd), content(content) {}
-  MIComment(std::string&& content, MachineInst* insertBefore)
-      : MachineInst(Tag::Comment, insertBefore), content(content) {}
+  MIComment(std::string&& content, MachineBB* InsertAtEnd)
+      : MachineInst(Tag::Comment, InsertAtEnd), content(content) {}
+  MIComment(std::string&& content, MachineInst* InsertBefore)
+      : MachineInst(Tag::Comment, InsertBefore), content(content) {}
 };

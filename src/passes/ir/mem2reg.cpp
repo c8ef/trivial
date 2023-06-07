@@ -76,7 +76,7 @@ void mem2reg(IrFunc* f) {
         // 如果一个 value 在 alloca_ids 中，它的实际类型必然是
         // AllocaInst，无需再做 dyn_cast
         if (auto it = alloca_ids.find(i); it != alloca_ids.end()) {
-          bb->insts.remove(i);
+          bb->insts.Remove(i);
           delete static_cast<AllocaInst*>(i);
         } else if (auto x = dyn_cast<LoadInst>(i)) {
           // 这里不能，也不用再看 x->arr.value 是不是 AllocaInst 了
@@ -85,7 +85,7 @@ void mem2reg(IrFunc* f) {
           auto it = alloca_ids.find(x->arr.value);
           if (it != alloca_ids.end()) {
             x->replaceAllUseWith(values[it->second]);
-            bb->insts.remove(x);
+            bb->insts.Remove(x);
             x->arr.value =
                 nullptr;  // 它用到被 delete 的 AllocaInst，已经不能再访问了
             delete x;  // 跟 i->deleteValue() 作用是一样的 (但是跟 delete
@@ -95,7 +95,7 @@ void mem2reg(IrFunc* f) {
           auto it = alloca_ids.find(x->arr.value);
           if (it != alloca_ids.end()) {
             values[it->second] = x->data.value;
-            bb->insts.remove(x);
+            bb->insts.Remove(x);
             x->arr.value = nullptr;
             delete x;
           }

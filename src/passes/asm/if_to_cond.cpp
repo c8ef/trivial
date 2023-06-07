@@ -41,7 +41,7 @@ void if_to_cond(MachineFunc* f) {
 
         if (can_optimize) {
           dbg("Optimizing branches to conditional execution");
-          bb->insts.remove(b);
+          bb->insts.Remove(b);
           ArmCond cond = opposite_cond(b->cond);
           for (auto inst = bb2->insts.head; inst; inst = inst->next) {
             if (auto x = dyn_cast<MIAccess>(inst)) {
