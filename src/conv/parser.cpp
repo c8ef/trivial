@@ -2,7 +2,7 @@
 
 #include <stack>
 
-const int kOpPrecTable[] = {MIMIC_OPERATORS(MIMIC_EXPAND_THIRD)};
+const int kOpPrecTable[] = {TRIVIAL_OPERATORS(TRIVIAL_EXPAND_THIRD)};
 
 inline int GetOpPrec(Operator op) { return kOpPrecTable[static_cast<int>(op)]; }
 

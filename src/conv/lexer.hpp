@@ -8,9 +8,9 @@
 #include "conv/token.hpp"
 
 inline constexpr const char* kKeywords[] = {
-    MIMIC_KEYWORDS(MIMIC_EXPAND_SECOND)};
+    TRIVIAL_KEYWORDS(TRIVIAL_EXPAND_SECOND)};
 inline constexpr const char* kOperators[] = {
-    MIMIC_OPERATORS(MIMIC_EXPAND_SECOND)};
+    TRIVIAL_OPERATORS(TRIVIAL_EXPAND_SECOND)};
 
 class Lexer {
  public:

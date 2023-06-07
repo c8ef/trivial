@@ -1,13 +1,13 @@
 #pragma once
 
 // all supported keywords
-#define MIMIC_KEYWORDS(e)                                         \
+#define TRIVIAL_KEYWORDS(e)                                         \
   e(If, "if") e(Else, "else") e(While, "while") e(Break, "break") \
       e(Continue, "continue") e(Return, "return") e(Void, "void") \
           e(Int, "int") e(Const, "const")
 
 // all supported operators
-#define MIMIC_OPERATORS(e)                                          \
+#define TRIVIAL_OPERATORS(e)                                          \
   e(Add, "+", 90) e(Sub, "-", 90) e(Mul, "*", 100) e(Div, "/", 100) \
       e(Mod, "%", 100) e(Equal, "==", 60) e(NotEqual, "!=", 60)     \
           e(Less, "<", 70) e(LessEqual, "<=", 70) e(Great, ">", 70) \
@@ -15,11 +15,11 @@
                   e(LogicOr, "||", 10) e(LogicNot, "!", -1) e(Assign, "=", 0)
 
 // expand first element to comma-separated list
-#define MIMIC_EXPAND_FIRST(i, ...) i,
+#define TRIVIAL_EXPAND_FIRST(i, ...) i,
 // expand second element to comma-separated list
-#define MIMIC_EXPAND_SECOND(i, j, ...) j,
+#define TRIVIAL_EXPAND_SECOND(i, j, ...) j,
 // expand third element to comma-separated list
-#define MIMIC_EXPAND_THIRD(i, j, k, ...) k,
+#define TRIVIAL_EXPAND_THIRD(i, j, k, ...) k,
 
 enum class Token {
   Error,
@@ -31,5 +31,5 @@ enum class Token {
   Other,
 };
 
-enum class Keyword { MIMIC_KEYWORDS(MIMIC_EXPAND_FIRST) };
-enum class Operator { MIMIC_OPERATORS(MIMIC_EXPAND_FIRST) };
+enum class Keyword { TRIVIAL_KEYWORDS(TRIVIAL_EXPAND_FIRST) };
+enum class Operator { TRIVIAL_OPERATORS(TRIVIAL_EXPAND_FIRST) };
