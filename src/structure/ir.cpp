@@ -165,8 +165,6 @@ struct pv {
 
 // output IR
 std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
-  using std::endl;
-
   for (auto& d : p.glob_decl) {
     os << "@_" << d->name << " = global ";
     // type
@@ -178,9 +176,9 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
           d->flatten_init_list.data() + d->flatten_init_list.size());
     } else {
       // default 0 initialized
-      os << "zeroinitializer" << endl;
+      os << "zeroinitializer" << '\n';
     }
-    os << endl;
+    os << '\n';
   }
 
   for (auto f = p.func.head; f != nullptr; f = f->next) {
@@ -205,13 +203,13 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
     }
     os << ")";
     if (f->builtin) {
-      os << endl;
+      os << '\n';
       continue;
     } else {
-      os << " {" << endl;
+      os << " {" << '\n';
     }
 
-    os << "_entry:" << endl;
+    os << "_entry:" << '\n';
     for (auto& d : p.glob_decl) {
       os << "\t%_glob_" << d->name << " = getelementptr inbounds ";
       print_dims(os, d->dims.data(), d->dims.data() + d->dims.size());
@@ -219,12 +217,12 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
       print_dims(os, d->dims.data(), d->dims.data() + d->dims.size());
       os << "* @_" << d->name;
       if (d->dims.empty()) {
-        os << ", i32 0" << endl;
+        os << ", i32 0" << '\n';
       } else {
-        os << ", i32 0, i32 0" << endl;
+        os << ", i32 0, i32 0" << '\n';
       }
     }
-    os << "\tbr label %_0" << endl;
+    os << "\tbr label %_0" << '\n';
 
     // bb 的标号没有必要用 IndexMapper，而且 IndexMapper
     // 的编号是先到先得，这看着并不是很舒服
@@ -243,7 +241,7 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
       }
       // 这里原来会输出 dom info 的，现在不输出了，因为现在所有 pass 结束后 dom
       // info 不是有效的
-      os << endl;
+      os << '\n';
       for (Inst* i = bb->mem_phis.head; i; i = i->next) {
         auto x = static_cast<MemPhiInst*>(i);
         os << "\t; mem" << v_index.get(x) << " = MemPhi ";
@@ -252,7 +250,7 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
           os << "[" << pv(v_index, x->incoming_values[j].value) << ", %_"
              << bb_index.find(x->incoming_bbs()[j])->second << "]";
         }
-        os << " for load/arr@" << x->load_or_arr << endl;
+        os << " for load/arr@" << x->load_or_arr << '\n';
       }
       for (auto inst = bb->insts.head; inst != nullptr; inst = inst->next) {
         os << "\t";
@@ -262,7 +260,7 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
           os << "%t" << temp << " = alloca ";
           print_dims(os, x->sym->dims.data(),
                      x->sym->dims.data() + x->sym->dims.size());
-          os << ", align 4" << endl;
+          os << ", align 4" << '\n';
           os << "\t" << pv(v_index, inst) << " = getelementptr inbounds ";
           print_dims(os, x->sym->dims.data(),
                      x->sym->dims.data() + x->sym->dims.size());
@@ -271,33 +269,33 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
                      x->sym->dims.data() + x->sym->dims.size());
           os << "* %t" << temp;
           if (x->sym->dims.empty()) {
-            os << ", i32 0" << endl;
+            os << ", i32 0" << '\n';
           } else {
-            os << ", i32 0, i32 0" << endl;
+            os << ", i32 0, i32 0" << '\n';
           }
         } else if (auto x = dyn_cast<GetElementPtrInst>(inst)) {
-          os << "; getelementptr " << v_index.get(inst) << endl << "\t";
+          os << "; getelementptr " << v_index.get(inst) << '\n' << "\t";
           u32 temp = v_index.alloc();
           os << "%t" << temp << " = mul i32 " << pv(v_index, x->index.value)
-             << ", " << x->multiplier << endl;
+             << ", " << x->multiplier << '\n';
           os << "\t" << pv(v_index, inst)
              << " = getelementptr inbounds i32, i32* "
              << pv(v_index, x->arr.value) << ", i32 "
-             << "%t" << temp << endl;
+             << "%t" << temp << '\n';
         } else if (auto x = dyn_cast<StoreInst>(inst)) {
-          os << "; store " << v_index.get(x) << endl << "\t";
+          os << "; store " << v_index.get(x) << '\n' << "\t";
           // temp ptr
           u32 temp = v_index.alloc();
           os << "%t" << temp << " = getelementptr inbounds i32, i32";
           os << "* " << pv(v_index, x->arr.value) << ", ";
           os << "i32 " << pv(v_index, x->index.value);
-          os << endl;
+          os << '\n';
           os << "\tstore i32 " << pv(v_index, x->data.value) << ", i32* %t"
-             << temp << ", align 4" << endl;
+             << temp << ", align 4" << '\n';
         } else if (auto x = dyn_cast<LoadInst>(inst)) {
           if (x->mem_token.value) {
             os << "; load@" << x << " arr@" << x->arr.value << ", use "
-               << pv(v_index, x->mem_token.value) << endl
+               << pv(v_index, x->mem_token.value) << '\n'
                << "\t";
           }
           // temp ptr
@@ -305,48 +303,48 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
           os << "%t" << temp << " = getelementptr inbounds i32, i32";
           os << "* " << pv(v_index, x->arr.value) << ", ";
           os << "i32 " << pv(v_index, x->index.value);
-          os << endl;
+          os << '\n';
           os << "\t" << pv(v_index, inst) << " = load i32, i32* %t" << temp
-             << ", align 4" << endl;
+             << ", align 4" << '\n';
         } else if (auto x = dyn_cast<BinaryInst>(inst)) {
-          auto op_name = BinaryInst::LLVM_OPS[(int)x->tag];
+          auto op_name = BinaryInst::kLLVMOps[(int)x->tag];
           bool conversion =
               Value::Tag::Lt <= x->tag && x->tag <= Value::Tag::Ne;
           if (conversion) {
             u32 temp = v_index.alloc();
             os << "%t" << temp << " = " << op_name << " i32 "
                << pv(v_index, x->lhs.value) << ", " << pv(v_index, x->rhs.value)
-               << endl;
+               << '\n';
             os << "\t" << pv(v_index, inst) << " = "
                << "zext i1 "
-               << "%t" << temp << " to i32" << endl;
+               << "%t" << temp << " to i32" << '\n';
           } else if (x->tag == Value::Tag::Rsb) {
             os << pv(v_index, inst) << " = sub i32 "
                << pv(v_index, x->rhs.value) << ", " << pv(v_index, x->lhs.value)
-               << endl;
+               << '\n';
           } else {
             os << pv(v_index, inst) << " = " << op_name << " i32 "
                << pv(v_index, x->lhs.value) << ", " << pv(v_index, x->rhs.value)
-               << endl;
+               << '\n';
           }
         } else if (auto x = dyn_cast<JumpInst>(inst)) {
-          os << "br label %_" << bb_index.find(x->next)->second << endl;
+          os << "br label %_" << bb_index.find(x->next)->second << '\n';
         } else if (auto x = dyn_cast<BranchInst>(inst)) {
           // add comment
           os << "; if " << pv(v_index, x->cond.value) << " then _"
              << bb_index.find(x->left)->second << " else _"
-             << bb_index.find(x->right)->second << endl;
+             << bb_index.find(x->right)->second << '\n';
           u32 temp = v_index.alloc();
           os << "\t%t" << temp << " = icmp ne i32 "
-             << pv(v_index, x->cond.value) << ", 0" << endl;
+             << pv(v_index, x->cond.value) << ", 0" << '\n';
           os << "\tbr i1 %t" << temp << ", label %_"
              << bb_index.find(x->left)->second << ", label %_"
-             << bb_index.find(x->right)->second << endl;
+             << bb_index.find(x->right)->second << '\n';
         } else if (auto x = dyn_cast<ReturnInst>(inst)) {
           if (x->ret.value) {
-            os << "ret i32 " << pv(v_index, x->ret.value) << endl;
+            os << "ret i32 " << pv(v_index, x->ret.value) << '\n';
           } else {
-            os << "ret void" << endl;
+            os << "ret void" << '\n';
           }
         } else if (auto x = dyn_cast<CallInst>(inst)) {
           Func* callee = x->func->func;
@@ -372,7 +370,7 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
               os << ", ";
             }
           }
-          os << ")" << endl;
+          os << ")" << '\n';
         } else if (auto x = dyn_cast<PhiInst>(inst)) {
           os << pv(v_index, inst) << " = phi i32 ";
           for (u32 i = 0; i < x->incoming_values.size(); ++i) {
@@ -380,17 +378,17 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
             os << "[" << pv(v_index, x->incoming_values[i].value) << ", %_"
                << bb_index.find(x->incoming_bbs()[i])->second << "]";
           }
-          os << endl;
+          os << '\n';
         } else if (auto x = dyn_cast<MemOpInst>(inst)) {
           os << "; mem" << v_index.get(x) << " for load@" << x->load << ", use "
-             << pv(v_index, x->mem_token.value) << endl;
+             << pv(v_index, x->mem_token.value) << '\n';
         } else {
           UNREACHABLE();
         }
       }
     }
 
-    os << "}" << endl << endl;
+    os << "}" << '\n' << '\n';
   }
 
   return os;

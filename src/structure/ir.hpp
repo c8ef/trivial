@@ -251,7 +251,7 @@ struct BinaryInst : Inst {
            (tag >= Tag::Lt && tag <= Tag::Or);
   }
 
-  constexpr static const char* LLVM_OPS[14] = {
+  constexpr static const char* kLLVMOps[14] = {
       /* Add = */ "add",
       /* Sub = */ "sub",
       /* Rsb = */ nullptr,
@@ -426,7 +426,7 @@ struct PhiInst : Inst {
     }
   }
 
-  explicit PhiInst(Inst* InsertBefore) : Inst(Tag::Phi, InsertBefore) {
+  explicit PhiInst(Inst* insert_before) : Inst(Tag::Phi, insert_before) {
     u32 n = incoming_bbs().size();
     incoming_values.reserve(n);
     for (u32 i = 0; i < n; ++i) {
@@ -439,8 +439,8 @@ struct MemOpInst : Inst {
   DEFINE_CLASSOF(Value, p->tag == Tag::MemOp);
   Use mem_token;
   LoadInst* load;
-  MemOpInst(LoadInst* load, Inst* InsertBefore)
-      : Inst(Tag::MemOp, InsertBefore), mem_token(nullptr, this), load(load) {}
+  MemOpInst(LoadInst* load, Inst* insert_before)
+      : Inst(Tag::MemOp, insert_before), mem_token(nullptr, this), load(load) {}
 };
 
 // 它的前几个字段和PhiInst是兼容的，所以可以当成PhiInst用(也许理论上有隐患，但是实际上应该没有问题)
@@ -455,9 +455,9 @@ struct MemPhiInst : Inst {
   // *，后者的load_or_arr来自于LoadInst
   void* load_or_arr;
 
-  explicit MemPhiInst(void* load_or_arr, BasicBlock* insertAtFront)
+  explicit MemPhiInst(void* load_or_arr, BasicBlock* insert_at_front)
       : Inst(Tag::MemPhi), load_or_arr(load_or_arr) {
-    bb = insertAtFront;
+    bb = insert_at_front;
     bb->mem_phis.InsertAtBegin(this);
     u32 n = incoming_bbs().size();
     incoming_values.reserve(n);
