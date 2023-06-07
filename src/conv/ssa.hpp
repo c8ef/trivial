@@ -3,7 +3,7 @@
 #include "structure/ast.hpp"
 #include "structure/ir.hpp"
 
-struct SsaContext {
+struct SSAContext {
   IrProgram* program;
   IrFunc* func;
   BasicBlock* bb;

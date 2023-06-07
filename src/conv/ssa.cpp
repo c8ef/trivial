@@ -3,7 +3,7 @@
 #include "casting.hpp"
 #include "structure/ast.hpp"
 
-Value* ConvertExpr(SsaContext* ctx, Expr* expr) {
+Value* ConvertExpr(SSAContext* ctx, Expr* expr) {
   if (auto* x = dyn_cast<Binary>(expr)) {
     auto* lhs = ConvertExpr(ctx, x->lhs);
     if (x->tag == Expr::Tag::Mod) {
@@ -126,22 +126,22 @@ Value* ConvertExpr(SsaContext* ctx, Expr* expr) {
   return nullptr;
 }
 
-void ConvertStmt(SsaContext* ctx, Stmt* stmt) {
+void ConvertStmt(SSAContext* ctx, Stmt* stmt) {
   if (auto* x = dyn_cast<DeclStmt>(stmt)) {
     for (auto& decl : x->decls) {
-      // local variables
+      // alloca for local variable
       auto* inst = new AllocaInst(&decl, ctx->bb);
       decl.value = inst;
 
-      // handle init expr
       if (decl.has_init) {
         if (decl.init.val1) {
-          // assign variable to expr
+          // store the init value in the allocated memory
           auto* init = ConvertExpr(ctx, decl.init.val1);
           new StoreInst(&decl, inst, init, ConstValue::get(0), ctx->bb);
         } else {
-          // assign each element of FlattenInitList
-          // heuristic: count how many elements are zero
+          // assign each element of flatten_init_list
+          // count how many elements are zero, if there are more than 10 zero
+          // then use memset to set all of them
           int num_zeros = 0;
           std::vector<Value*> values;
           values.reserve(decl.flatten_init_list.size());
@@ -184,7 +184,7 @@ void ConvertStmt(SsaContext* ctx, Stmt* stmt) {
       }
     }
   } else if (auto* x = dyn_cast<Assign>(stmt)) {
-    // evaluate dims first
+    // first evaluate the dimensions
     std::vector<Value*> dims;
     dims.reserve(x->dims.size());
     for (auto& expr : x->dims) {
@@ -192,20 +192,19 @@ void ConvertStmt(SsaContext* ctx, Stmt* stmt) {
       dims.push_back(dim);
     }
 
-    // rhs
     auto* rhs = ConvertExpr(ctx, x->rhs);
 
     if (x->dims.empty()) {
       new StoreInst(x->lhs_sym, x->lhs_sym->value, rhs, ConstValue::get(0),
                     ctx->bb);
     } else {
-      // all levels except last level, emit GetElementPtr
+      // all level except last level emit GetElementPtr, last level emit Store
       auto* last = x->lhs_sym->value;
-      for (u32 i = 0; i < x->dims.size(); i++) {
+      for (u64 i = 0; i < x->dims.size(); i++) {
         int size = i + 1 < x->lhs_sym->dims.size()
                        ? x->lhs_sym->dims[i + 1]->result
                        : 1;
-        if (i + 1 < x->dims.size()) {
+        if (i != x->dims.size() - 1) {
           auto* inst =
               new GetElementPtrInst(x->lhs_sym, last, dims[i], size, ctx->bb);
           last = inst;
@@ -214,7 +213,6 @@ void ConvertStmt(SsaContext* ctx, Stmt* stmt) {
         }
       }
     }
-
   } else if (auto* x = dyn_cast<If>(stmt)) {
     // 1. check `cond`
     // 2. branch to `then` or `else`
@@ -229,23 +227,24 @@ void ConvertStmt(SsaContext* ctx, Stmt* stmt) {
 
     new BranchInst(cond, bb_then, bb_else, ctx->bb);
 
-    // then
+    // then branch
     ctx->bb = bb_then;
     ConvertStmt(ctx, x->on_true);
-    // jump to end bb
+    // jump to the end basic block
     if (!ctx->bb->Valid()) {
       new JumpInst(bb_end, ctx->bb);
     }
-    // else
+    // else branch
     ctx->bb = bb_else;
     if (x->on_false) {
       ConvertStmt(ctx, x->on_false);
     }
-    // jump to end bb
+    // jump to the end basic block
     if (!ctx->bb->Valid()) {
       new JumpInst(bb_end, ctx->bb);
     }
 
+    // modify the context basic block
     ctx->bb = bb_end;
   } else if (auto* x = dyn_cast<While>(stmt)) {
     // four bb:
@@ -290,6 +289,7 @@ void ConvertStmt(SsaContext* ctx, Stmt* stmt) {
     for (auto& stmt : x->stmts) {
       ConvertStmt(ctx, stmt);
       if (isa<Continue>(stmt) || isa<Break>(stmt) || isa<Return>(stmt)) {
+        // omit the following stmts
         break;
       }
     }
@@ -351,7 +351,8 @@ IrProgram* ConvertSSA(Program& program) {
         }
       }
 
-      SsaContext ctx = {ret, func, entry_basic_block};
+      SSAContext ctx = {ret, func, entry_basic_block};
+      // first block in ssa context is entry block
       for (auto& stmt : f->body.stmts) {
         ConvertStmt(&ctx, stmt);
       }

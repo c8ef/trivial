@@ -183,7 +183,7 @@ struct Func {
   // get value in ConvertSSA
   IrFunc* val;
 
-  // builtin_function[8]是memset，这个下标在ssa.cpp会用到，修改时需要一并修改
+  // builtin_function[8] = memset, used in ConvertStmt
   static Func builtin_function[9];
 };
 
