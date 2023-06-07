@@ -232,12 +232,13 @@ std::pair<Expr**, Expr**> Env::CheckExpr(Expr* e) {
     }
 
     for (u64 i = 0; i < x->args.size(); ++i) {
-      auto a = CheckExpr(x->args[i]);
+      auto arg = CheckExpr(x->args[i]);
       std::vector<Expr*>& p = f->params[i].dims;
-      bool ok = a.first && static_cast<size_t>(a.second - a.first) == p.size();
+      bool ok =
+          arg.first && static_cast<u64>(arg.second - arg.first) == p.size();
       // skip the first dimension in function parameter
       for (u64 j = 1; ok && j < p.size(); ++j) {
-        if (a.first[j]->result != p[j]->result) {
+        if (arg.first[j]->result != p[j]->result) {
           ok = false;
         }
       }
@@ -255,11 +256,11 @@ std::pair<Expr**, Expr**> Env::CheckExpr(Expr* e) {
     Decl* d = LookupDecl(x->name);
     x->lhs_sym = d;
     if (x->dims.size() > d->dims.size()) {
-      ERROR("index operator expect array operand");
+      ERROR("too many dimension in index expression");
     }
     for (Expr* e : x->dims) {
       if (!IsInt(CheckExpr(e))) {
-        ERROR("index operator expect integer operand");
+        ERROR("array subscript is not an integer");
       }
     }
     // 这里逻辑上总是返回：后面的，但是 stl 的实现中空 vector 的指针可能是
