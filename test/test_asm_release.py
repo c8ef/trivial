@@ -12,7 +12,7 @@ dirs = [
 
 exe = 'temp'
 asm = 'temp.s'
-trivial_asm = f'../build/trivial -o {asm} -i'
+trivial_asm = f'../build/trivial -O -o {asm} -i'
 cc = f'./aarch32-gcc/bin/arm-none-linux-gnueabihf-gcc -x assembler -z noexecstack {asm} -O3 -Werror -o {exe} -static -Laarch32 -lsysy'
 
 

@@ -13,7 +13,7 @@ dirs = [
 exe = 'temp'
 asm = 'temp.s'
 ir_file = 'temp.ll'
-trivial_ir = f'../build/trivial --ir-file {ir_file} -i'
+trivial_ir = f'../build/trivial -O --ir-file {ir_file} -i'
 lli = f'llc -O3 {ir_file} -o {asm}'
 cc = f'clang {asm} -O3 -Werror -o {exe} -static -Lnative -lsysy'
 

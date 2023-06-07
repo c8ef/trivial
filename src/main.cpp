@@ -22,6 +22,10 @@ int main(int argc, char* argv[]) {
   cli.add_argument("-l", "--ir-file").help("output ir file").default_value("");
   cli.add_argument("-i", "--input").help("input source file").required();
   cli.add_argument("-o", "--output").help("output assembly").default_value("");
+  cli.add_argument("-O", "--opt")
+      .help("enable middle-end optimization")
+      .default_value(false)
+      .implicit_value(true);
   cli.add_argument("--dump-token")
       .help("dump lexer output")
       .default_value(false)
@@ -36,6 +40,7 @@ int main(int argc, char* argv[]) {
 
   bool print_pass = false;
   bool dump_token = false;
+  bool opt = false;
   std::string src;
   std::string output;
   std::string ir_file;
@@ -43,6 +48,7 @@ int main(int argc, char* argv[]) {
   dump_token = cli["--dump-token"] == true;
   debug_mode = cli["--debug"] == true;
   print_pass = cli["--print-pass"] == true;
+  opt = cli["--opt"] == true;
   src = cli.get<std::string>("--input");
   output = cli.get<std::string>("--output");
   ir_file = cli.get<std::string>("--ir-file");
@@ -70,7 +76,11 @@ int main(int argc, char* argv[]) {
   spdlog::debug("type check success");
 
   auto* ir = ConvertSSA(program);
-  run_passes(ir);
+
+  if (opt) {
+    run_passes(ir);
+  }
+
   if (!ir_file.empty()) {
     std::ofstream(ir_file) << *ir;
   }
