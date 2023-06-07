@@ -53,9 +53,6 @@ void Env::CheckFunc(Func* f) {
   local_stk.pop_back();
 }
 
-// 数组和标量的初始化都会以 FlattenInitList 的形式存储
-// 即使没有初始化，全局变量也会以 0 初始化，而局部变量的 FlattenInitList
-// 这时是空的
 void Env::CheckDecl(Decl& d) {
   for (auto it = d.dims.rbegin(); it < d.dims.rend(); ++it) {
     Expr* e = *it;
@@ -96,6 +93,7 @@ void Env::CheckDecl(Decl& d) {
   } else if (d.is_const) {
     ERROR("const declaration must have initialization");
   } else if (d.is_glob) {
+    // global variable without initialization will be initialized to 0
     d.flatten_init_list.resize(d.dims.empty() ? 1 : d.dims[0]->result,
                                new IntConst{{Expr::IntConst, 0}, 0});
   }
@@ -110,7 +108,7 @@ void Env::CheckStmt(Stmt* s) {
     }
     for (Expr* e : x->dims) {
       if (!IsInt(CheckExpr(e))) {
-        ERROR("integer operator expect integer operand");
+        ERROR("array subscript is not an integer");
       }
     }
     if (!(IsInt(CheckExpr(x->rhs)) && d->dims.size() == x->dims.size())) {
@@ -159,8 +157,7 @@ void Env::CheckStmt(Stmt* s) {
       ERROR("continue statement outside loop");
     }
   } else if (auto* x = dyn_cast<Return>(s)) {
-    auto t =
-        x->val != nullptr ? CheckExpr(x->val) : std::pair<Expr**, Expr**>{};
+    auto t = x->val ? CheckExpr(x->val) : std::pair<Expr**, Expr**>{};
     if (!((cur_func->is_int && IsInt(t)) || (!cur_func->is_int && !t.first))) {
       ERROR("return type mismatch");
     }
@@ -295,7 +292,7 @@ void Env::Eval(Expr* e) {
     }
     u32 off = 0;
 
-    for (u32 i = 0; i < x->dims.size(); ++i) {
+    for (u64 i = 0; i < x->dims.size(); ++i) {
       Expr* idx = x->dims[i];
       Eval(idx);
       off +=

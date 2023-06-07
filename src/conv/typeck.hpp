@@ -45,7 +45,7 @@ struct Env {
   // stack of local declarations
   std::vector<std::unordered_map<std::string, Decl*>> local_stk;
   Func* cur_func = nullptr;
-  u32 loop_cnt = 0;
+  u64 loop_cnt = 0;
 };
 
 void TypeCheck(Program& program);

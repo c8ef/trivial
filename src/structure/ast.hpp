@@ -120,7 +120,7 @@ struct Assign : Stmt {
   std::string ident;
   std::vector<Expr*> dims;
   Expr* rhs;
-  Decl* lhs_sym;  // typeck前是nullptr，若typeck成功则非空
+  Decl* lhs_sym;
 };
 
 struct ExprStmt : Stmt {
