@@ -379,7 +379,7 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
       }
     }
 
-    os << "}" << '\n' << '\n';
+    os << "}" << '\n';
   }
 
   return os;

@@ -1,5 +1,4 @@
-#!/usr/bin/python3
-
+import argparse
 import os
 from os import path
 import subprocess
@@ -13,7 +12,7 @@ dirs = [
 
 exe = 'temp'
 asm = 'temp.s'
-mmcc = f'../build/trivial -o {asm} -i'
+trivial = f'../build/trivial -o {asm} -i'
 cc = f'./aarch32-gcc/bin/arm-none-linux-gnueabihf-gcc -x assembler -z noexecstack {asm} -O3 -Werror -o {exe} -static -Laarch32 -lsysy'
 
 
@@ -26,15 +25,15 @@ def eprint(*args, **kwargs):
 # run single test case
 def run_case(sy_file, in_file, out_file):
     # compile to executable
-    mmcc_cmd = mmcc.split(' ') + [sy_file]
-
-    result = subprocess.run(mmcc_cmd, timeout=60)
+    trivial_cmd = trivial.split(' ') + [sy_file]
+    result = subprocess.run(trivial_cmd, timeout=60)
     if result.returncode:
         return False
 
     result = subprocess.run(cc.split(' '))
     if result.returncode:
         return False
+
     # run compiled file
     if in_file:
         with open(in_file) as f:
@@ -138,11 +137,8 @@ def scan_cases(dirs):
 
 
 if __name__ == '__main__':
-    import argparse
-    # initialize argument parser
     parser = argparse.ArgumentParser()
     parser.formatter_class = argparse.RawTextHelpFormatter
-    parser.description = 'An auto-test tool for MimiC project.'
     parser.add_argument('-i',
                         '--input',
                         default='',
