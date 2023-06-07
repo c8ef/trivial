@@ -2,8 +2,6 @@
 
 #include "structure/ast.hpp"
 
-#define ERR(...) ERR_EXIT(TypeCheckError, __VA_ARGS__)
-
 // use 2 LSB differentiate Func and Decl
 struct Symbol {
   size_t p;
@@ -31,6 +29,10 @@ struct Env {
   void CheckFunc(Func* f);
   void CheckDecl(Decl& d);
   void CheckStmt(Stmt* s);
+
+  // type is int: return empty
+  // type is void: return none
+  // type is int[]: return slice
   std::pair<Expr**, Expr**> CheckExpr(Expr* e);
   void Eval(Expr* e);
   void FlattenInitList(std::vector<InitList>& src, Expr** dims, Expr** dims_end,
@@ -46,4 +48,4 @@ struct Env {
   u32 loop_cnt = 0;
 };
 
-void TypeCheck(Program& p);
+void TypeCheck(Program& program);

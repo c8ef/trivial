@@ -47,9 +47,8 @@ struct Index : Expr {
   DEFINE_CLASSOF(Expr, p->tag == Tag::Index);
 
   std::string name;
-
   std::vector<Expr*> dims;
-  Decl* lhs_sym;  // typeck前是nullptr，若typeck成功则非空
+  Decl* lhs_sym;
 };
 
 struct IntConst : Expr {
@@ -63,7 +62,7 @@ struct Call : Expr {
 
   std::string func;
   std::vector<Expr*> args;
-  Func* f = nullptr;  // typeck前是nullptr，若typeck成功则非空
+  Func* f = nullptr;
 
   // do some simple preprocess in constructor
   explicit Call(std::string_view func, std::vector<Expr*> args)
@@ -82,18 +81,15 @@ struct Value;
 struct Decl {
   bool is_const;
   bool is_glob;
-  bool has_init;  // 配合init使用
+  bool has_init;
   std::string name;
-  // 基本类型总是int，所以不记录，只记录数组维度
-  // dims[0]可能是nullptr，当且仅当Decl用于Func::params，且参数形如int
-  // a[][10]时；其他情况下每个元素都非空
-  // 经过typeck后，每个维度保存的result是包括它在内右边所有维度的乘积，例如int[2][3][4]就是{24,
-  // 12, 4}
+
+  // when decl is used as function parameter, dims[0] can be nullptr
+  // after type check, int[2][3][4] -> {24, 12, 4}
   std::vector<Expr*> dims;
-  InitList
-      init;  // 配合has_init，逻辑上相当于std::optional<InitList>，但是stl这一套实在是不好用
-  std::vector<Expr*>
-      FlattenInitList;  // parse完后为空，typeck阶段填充，是完全展开+补0后的init
+  InitList init;
+  // fill in the type check phase
+  std::vector<Expr*> flatten_init_list;
 
   // ast->ir阶段赋值，每个Decl拥有属于自己的Value，Value
   // *的地址相等等价于指向同一个的变量
@@ -101,7 +97,7 @@ struct Decl {
   // 经过mem2reg后，参数和局部变量中的int将不再需要这个AllocaInst
   Value* value;
 
-  bool is_param_array() const { return !dims.empty() && dims[0] == nullptr; }
+  [[nodiscard]] bool IsParamArray() const { return !dims.empty() && !dims[0]; }
 };
 
 struct Stmt {
@@ -130,13 +126,13 @@ struct Assign : Stmt {
 struct ExprStmt : Stmt {
   DEFINE_CLASSOF(Stmt, p->tag == Stmt::ExprStmt);
 
-  Expr* val;  // nullable，为空时就是一条分号
+  Expr* val;
 };
 
 struct DeclStmt : Stmt {
   DEFINE_CLASSOF(Stmt, p->tag == Stmt::DeclStmt);
 
-  std::vector<Decl> decls;  // 一条语句可以定义多个变量
+  std::vector<Decl> decls;
 };
 
 struct Block : Stmt {
@@ -150,7 +146,7 @@ struct If : Stmt {
 
   Expr* cond;
   Stmt* on_true;
-  Stmt* on_false;  // nullable
+  Stmt* on_false;
 };
 
 struct While : Stmt {
@@ -171,7 +167,7 @@ struct Continue : Stmt {
 struct Return : Stmt {
   DEFINE_CLASSOF(Stmt, p->tag == Stmt::Return);
 
-  Expr* val;  // nullable
+  Expr* val;
 };
 
 struct IrFunc;
@@ -180,8 +176,7 @@ struct Func {
   // return type can only be void or int
   bool is_int;
   std::string name;
-  // 只是用Decl来复用一下代码，其实不能算是Decl，is_const / is_glob /
-  // has_init总是false
+  // is_const | is_glob | has_init always false
   std::vector<Decl> params;
   Block body;
 

@@ -338,7 +338,7 @@ again:
           }
           if (replaced)
             replace(x, ConstValue::get(
-                           x->lhs_sym->FlattenInitList[offset]->result));
+                           x->lhs_sym->flatten_init_list[offset]->result));
         }
         if (!replaced) replace(i, vn_of(vn, i));
       } else if (isa<GetElementPtrInst>(i) || is_pure_call(i)) {

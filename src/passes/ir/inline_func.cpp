@@ -50,7 +50,7 @@ void inline_func(IrProgram* p) {
       std::vector<Use>& args = x->args;
       std::vector<Decl>& params = x->func->func->params;
       for (u32 j = 0, sz = params.size(); j < sz; ++j) {
-        if (params[j].is_param_array()) {
+        if (params[j].IsParamArray()) {
           Value* arg = args[j].value;
           assert(isa<GetElementPtrInst>(arg));
           sym_map.insert(

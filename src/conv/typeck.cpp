@@ -39,7 +39,8 @@ void Env::CheckFunc(Func* f) {
   if (!glob.insert({f->name, Symbol::MakeFunc(f)}).second) {
     ERROR("duplicate function: {}", f->name);
   }
-  local_stk.emplace_back();  // 参数作用域就是第一层局部变量的作用域
+  // push argument environment
+  local_stk.emplace_back();
   for (Decl& d : f->params) {
     CheckDecl(d);
     if (!local_stk[0].insert({d.name, &d}).second) {
@@ -56,7 +57,6 @@ void Env::CheckFunc(Func* f) {
 // 即使没有初始化，全局变量也会以 0 初始化，而局部变量的 FlattenInitList
 // 这时是空的
 void Env::CheckDecl(Decl& d) {
-  // 每个维度保存的 result 是包括它在内右边所有维度的乘积
   for (auto it = d.dims.rbegin(); it < d.dims.rend(); ++it) {
     Expr* e = *it;
     // in function parameter the first array dimension can be empty
@@ -72,31 +72,32 @@ void Env::CheckDecl(Decl& d) {
                       e->result + 10);
         e->result += 10;
       }
+      // after type check, int[2][3][4] -> {24, 12, 4}
       if (it != d.dims.rbegin()) {
         e->result *= it[-1]->result;
       }
     }
   }
   if (d.has_init) {
-    if (d.dims.empty() && (d.init.val1 != nullptr)) {
+    if (d.dims.empty() && d.init.val1) {
       // like `int x = 1`
       CheckExpr(d.init.val1);
       if (d.is_const || d.is_glob) {
         Eval(d.init.val1);
       }
-      d.FlattenInitList.push_back(d.init.val1);
-    } else if (d.init.val1 == nullptr) {
+      d.flatten_init_list.push_back(d.init.val1);
+    } else if (!d.init.val1) {
       // like `int x[2] = {1， 2}`
       FlattenInitList(d.init.val2, d.dims.data(), d.dims.data() + d.dims.size(),
-                      d.is_const | d.is_glob, d.FlattenInitList);
+                      d.is_const | d.is_glob, d.flatten_init_list);
     } else {
       ERROR("incompatible initialization");
     }
   } else if (d.is_const) {
     ERROR("const declaration must have initialization");
   } else if (d.is_glob) {
-    d.FlattenInitList.resize(d.dims.empty() ? 1 : d.dims[0]->result,
-                             new IntConst{{Expr::IntConst, 0}, 0});
+    d.flatten_init_list.resize(d.dims.empty() ? 1 : d.dims[0]->result,
+                               new IntConst{{Expr::IntConst, 0}, 0});
   }
 }
 
@@ -113,17 +114,19 @@ void Env::CheckStmt(Stmt* s) {
       }
     }
     if (!(IsInt(CheckExpr(x->rhs)) && d->dims.size() == x->dims.size())) {
-      ERR("can only assign int to int");
+      ERROR("can only assign integer to integer");
     }
   } else if (auto* x = dyn_cast<ExprStmt>(s)) {
-    // 不要检查分号
-    if (x->val) CheckExpr(x->val);
+    // omit the empty stmt
+    if (x->val) {
+      CheckExpr(x->val);
+    }
   } else if (auto* x = dyn_cast<DeclStmt>(s)) {
     auto& top = local_stk.back();
     for (Decl& d : x->decls) {
       CheckDecl(d);
       if (!top.insert({d.name, &d}).second) {
-        ERR("duplicate local decl", d.name);
+        ERROR("duplicate local declaration: {}", d.name);
       }
     }
   } else if (auto* x = dyn_cast<Block>(s)) {
@@ -134,15 +137,15 @@ void Env::CheckStmt(Stmt* s) {
     local_stk.pop_back();
   } else if (auto* x = dyn_cast<If>(s)) {
     if (!IsInt(CheckExpr(x->cond))) {
-      ERR("cond isn't int type");
+      ERROR("condition must be integer type");
     }
     CheckStmt(x->on_true);
-    if (x->on_false != nullptr) {
+    if (x->on_false) {
       CheckStmt(x->on_false);
     }
   } else if (auto* x = dyn_cast<While>(s)) {
     if (!IsInt(CheckExpr(x->cond))) {
-      ERR("cond isn't int type");
+      ERROR("condition must be integer type");
     }
     ++loop_cnt;
     CheckStmt(x->body);
@@ -166,16 +169,13 @@ void Env::CheckStmt(Stmt* s) {
   }
 }
 
-// src 应该都是没有 Eval 过的；这里只处理必须是列表形式的 src，不处理单独 expr
-// 形式的 [dims, dims_end) 组成一个非空 slice；dims 应该符合 Decl::dims
-// 的描述，且已经求值完毕 FlattenInitList 可以用于常量和非常量的初始化，由
-// need_eval 控制
 void Env::FlattenInitList(std::vector<InitList>& src, Expr** dims,
                           Expr** dims_end, bool need_eval,
                           std::vector<Expr*>& dst) {
-  u32 elem_size = dims + 1 < dims_end ? dims[1]->result : 1,
-      expect = dims[0]->result;
-  u32 cnt = 0, old_len = dst.size();
+  u32 elem_size = dims + 1 < dims_end ? dims[1]->result : 1;
+  u32 expect = dims[0]->result;
+  u32 cnt = 0;
+  u32 old_len = dst.size();
   for (InitList& l : src) {
     if (l.val1) {
       CheckExpr(l.val1);
@@ -187,8 +187,8 @@ void Env::FlattenInitList(std::vector<InitList>& src, Expr** dims,
         cnt = 0;
       }
     } else {
-      // 遇到了一个新的列表，它必须恰好填充一个元素
-      // 给前一个未填满的元素补 0
+      // encounter a new init list
+      // fill the rest of the current dimension with 0
       if (cnt != 0) {
         dst.resize(dst.size() + elem_size - cnt,
                    new IntConst{{Expr::IntConst, 0}, 0});
@@ -197,7 +197,7 @@ void Env::FlattenInitList(std::vector<InitList>& src, Expr** dims,
       if (dims < dims_end) {
         FlattenInitList(l.val2, dims + 1, dims_end, need_eval, dst);
       } else {
-        ERR("initializer list has too many dimensions");
+        ERROR("init list has too many dimensions");
       }
     }
   }
@@ -206,48 +206,49 @@ void Env::FlattenInitList(std::vector<InitList>& src, Expr** dims,
     dst.resize(dst.size() + expect - actual,
                new IntConst{{Expr::IntConst, 0}, 0});
   } else {
-    ERR("too many initializing values", expect, actual);
+    ERROR("too many init value, expect {}, actual {}", expect, actual);
   }
 }
 
-// 配合 CheckExpr 使用
 bool Env::IsInt(std::pair<Expr**, Expr**> t) {
-  return (t.first != nullptr) && t.first == t.second;
+  return t.first && t.first == t.second;
 }
 
-// 返回 Option<&[Expr *]>：
-// 类型是 int 时返回空 slice，类型是 void 时返回 None，类型是
-// int[]...时返回对应维度的 slice
 std::pair<Expr**, Expr**> Env::CheckExpr(Expr* e) {
   const std::pair<Expr**, Expr**> none{};
-  const std::pair<Expr**, Expr**> empty{reinterpret_cast<Expr**>(8),
-                                        reinterpret_cast<Expr**>(8)};
+  const std::pair<Expr**, Expr**> empty{reinterpret_cast<Expr**>(0xdeadbeef),
+                                        reinterpret_cast<Expr**>(0xdeadbeef)};
   if (auto* x = dyn_cast<Binary>(e)) {
     auto l = CheckExpr(x->lhs);
     auto r = CheckExpr(x->rhs);
-    if (!IsInt(l) && !IsInt(r)) ERROR("binary operator expect integer operand");
+    if (!IsInt(l) && !IsInt(r)) {
+      ERROR("binary operator expect integer operand");
+    }
 
     return empty;
   }
   if (auto* x = dyn_cast<Call>(e)) {
     Func* f = LookupFunc(x->func);
     x->f = f;
-    if (f->params.size() != x->args.size())
+    if (f->params.size() != x->args.size()) {
       ERROR("function call argument count mismatch");
+    }
 
-    for (u32 i = 0; i < x->args.size(); ++i) {
+    for (u64 i = 0; i < x->args.size(); ++i) {
       auto a = CheckExpr(x->args[i]);
       std::vector<Expr*>& p = f->params[i].dims;
-      // 跳过第一个维度的检查，因为函数参数的第一个维度为空
-      bool ok = (a.first != nullptr) &&
-                static_cast<size_t>(a.second - a.first) == p.size();
-      for (u32 j = 1, end = p.size(); ok && j < end; ++j) {
+      bool ok = a.first && static_cast<size_t>(a.second - a.first) == p.size();
+      // skip the first dimension in function parameter
+      for (u64 j = 1; ok && j < p.size(); ++j) {
         if (a.first[j]->result != p[j]->result) {
           ok = false;
         }
       }
       if (!ok) {
-        ERR("function call arg mismatch", f->name, i + 1, f->params[i].name);
+        ERROR(
+            "function call argument mismatch: func name {}, argument id {}, "
+            "argument name {}",
+            f->name, i + 1, f->params[i].name);
       }
     }
     return f->is_int ? empty : none;
@@ -257,11 +258,11 @@ std::pair<Expr**, Expr**> Env::CheckExpr(Expr* e) {
     Decl* d = LookupDecl(x->name);
     x->lhs_sym = d;
     if (x->dims.size() > d->dims.size()) {
-      ERR("index operator expect array operand");
+      ERROR("index operator expect array operand");
     }
     for (Expr* e : x->dims) {
       if (!IsInt(CheckExpr(e))) {
-        ERROR("integer operator expect integer operand");
+        ERROR("index operator expect integer operand");
       }
     }
     // 这里逻辑上总是返回：后面的，但是 stl 的实现中空 vector 的指针可能是
@@ -293,17 +294,17 @@ void Env::Eval(Expr* e) {
       ERROR("array dimension mismatch");
     }
     u32 off = 0;
-    // 因为没有保存每个维度的长度，所以没法在每一个下标处都检查了，不过这也没什么关系
+
     for (u32 i = 0; i < x->dims.size(); ++i) {
       Expr* idx = x->dims[i];
       Eval(idx);
       off +=
           (i + 1 == x->dims.size() ? 1 : d->dims[i + 1]->result) * idx->result;
     }
-    if (off >= d->FlattenInitList.size()) {
+    if (off >= d->flatten_init_list.size()) {
       ERROR("array index out of range");
     }
-    x->result = d->FlattenInitList[off]->result;
+    x->result = d->flatten_init_list[off]->result;
   } else if (auto* x = dyn_cast<IntConst>(e)) {
     x->result = x->val;
   } else {
@@ -311,19 +312,19 @@ void Env::Eval(Expr* e) {
   }
 }
 
-void TypeCheck(Program& p) {
+void TypeCheck(Program& program) {
   Env env;
-  for (Func& f : Func::builtin_function) {
-    env.CheckFunc(&f);
+  for (Func& func : Func::builtin_function) {
+    env.CheckFunc(&func);
   }
-  for (auto& g : p.glob) {
-    if (Func* f = std::get_if<0>(&g)) {
-      env.CheckFunc(f);
+  for (auto& item : program.glob) {
+    if (Func* func = std::get_if<0>(&item)) {
+      env.CheckFunc(func);
     } else {
-      Decl* d = std::get_if<1>(&g);
-      env.CheckDecl(*d);
-      if (!env.glob.insert({d->name, Symbol::MakeDecl(d)}).second) {
-        ERROR("duplicate global declaration: {}", d->name);
+      Decl* decl = std::get_if<1>(&item);
+      env.CheckDecl(*decl);
+      if (!env.glob.insert({decl->name, Symbol::MakeDecl(decl)}).second) {
+        ERROR("duplicate global declaration: {}", decl->name);
       }
     }
   }

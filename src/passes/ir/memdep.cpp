@@ -23,8 +23,8 @@ static bool dim_alias(const std::vector<Expr*>& dim1,
 // 这个关系是对称的，但不是传递的，例如参数中的 int [] 和 int [][5]，int
 // [][10] 都 alias，但 int [][5] 和 int [][10] 不 alias
 bool alias(Decl* arr1, Decl* arr2) {
-  if (arr1->is_param_array()) {  // 参数
-    if (arr2->is_param_array())
+  if (arr1->IsParamArray()) {  // 参数
+    if (arr2->IsParamArray())
       // NOTE_OPT: this assumes that any two arrays in parameters do not alias
       return arr1->name == arr2->name;
     else if (arr2->is_glob)
@@ -32,14 +32,14 @@ bool alias(Decl* arr1, Decl* arr2) {
     else
       return false;
   } else if (arr1->is_glob) {  // 全局变量
-    if (arr2->is_param_array())
+    if (arr2->IsParamArray())
       return dim_alias(arr1->dims, arr2->dims);
     else if (arr2->is_glob)
       return arr1 == arr2;
     else
       return false;
   } else {  // 局部数组
-    if (arr2->is_param_array())
+    if (arr2->IsParamArray())
       return false;
     else if (arr2->is_glob)
       return false;
@@ -53,7 +53,7 @@ bool alias(Decl* arr1, Decl* arr2) {
 // AllocaInst，则只有当其地址被不完全 load
 // 作为参数传递给一个函数时，这个函数才可能修改它
 bool is_arr_call_alias(Decl* arr, CallInst* y) {
-  return arr->is_param_array() || arr->is_glob ||
+  return arr->IsParamArray() || arr->is_glob ||
          std::any_of(y->args.begin(), y->args.end(), [arr](Use& u) {
            if (auto a = dyn_cast<GetElementPtrInst>(u.value);
                a && alias(arr, a->lhs_sym))

@@ -353,7 +353,7 @@ std::ostream& operator<<(std::ostream& os, const MachineProgram& p) {
       }
     };
 
-    for (auto expr : decl->FlattenInitList) {
+    for (auto expr : decl->flatten_init_list) {
       if (!initialized) {
         initialized = true;
         last = expr->result;

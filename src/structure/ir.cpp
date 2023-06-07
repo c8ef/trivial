@@ -133,9 +133,10 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
     // type
     print_dims(os, d->dims.data(), d->dims.data() + d->dims.size());
     if (d->has_init) {
-      print_flatten_init(os, d->dims.data(), d->dims.data() + d->dims.size(),
-                         d->FlattenInitList.data(),
-                         d->FlattenInitList.data() + d->FlattenInitList.size());
+      print_flatten_init(
+          os, d->dims.data(), d->dims.data() + d->dims.size(),
+          d->flatten_init_list.data(),
+          d->flatten_init_list.data() + d->flatten_init_list.size());
     } else {
       // default 0 initialized
       os << "zeroinitializer" << endl;

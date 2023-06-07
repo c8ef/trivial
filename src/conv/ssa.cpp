@@ -149,9 +149,9 @@ void convert_stmt(SsaContext* ctx, Stmt* stmt) {
           // heuristic: count how many elements are zero
           int num_zeros = 0;
           std::vector<Value*> values;
-          values.reserve(decl.FlattenInitList.size());
-          for (u32 i = 0; i < decl.FlattenInitList.size(); i++) {
-            auto init = convert_expr(ctx, decl.FlattenInitList[i]);
+          values.reserve(decl.flatten_init_list.size());
+          for (u32 i = 0; i < decl.flatten_init_list.size(); i++) {
+            auto init = convert_expr(ctx, decl.flatten_init_list[i]);
             values.push_back(init);
             if (auto x = dyn_cast<ConstValue>(init)) {
               if (x->imm == 0) {
@@ -175,7 +175,7 @@ void convert_stmt(SsaContext* ctx, Stmt* stmt) {
                 ConstValue::get(decl.dims[0]->result * 4), call_inst);
           }
 
-          for (u32 i = 0; i < decl.FlattenInitList.size(); i++) {
+          for (u32 i = 0; i < decl.flatten_init_list.size(); i++) {
             // skip safely
             if (auto x = dyn_cast<ConstValue>(values[i])) {
               if (emit_memset && x->imm == 0) {

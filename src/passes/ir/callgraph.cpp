@@ -19,7 +19,7 @@ void compute_callgraph(IrProgram* p) {
                    x && x->lhs_sym->is_glob) {
           f->load_global = true;
         } else if (auto x = dyn_cast<StoreInst>(inst);
-                   x && (x->lhs_sym->is_glob || x->lhs_sym->is_param_array())) {
+                   x && (x->lhs_sym->is_glob || x->lhs_sym->IsParamArray())) {
           f->has_side_effect = true;
         }
       }

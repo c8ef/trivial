@@ -9,14 +9,6 @@
 #define DBG_MACRO_NO_WARNING
 #include "thirdparty/dbg.h"
 
-enum { SystemError = 1, TypeCheckError };
-
-#define ERR_EXIT(code, ...) \
-  do {                      \
-    dbg(__VA_ARGS__);       \
-    exit(code);             \
-  } while (false)
-
 #define ERROR(...)              \
   do {                          \
     spdlog::error(__VA_ARGS__); \
