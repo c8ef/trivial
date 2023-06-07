@@ -9,7 +9,8 @@ static void dfs(BasicBlock* bb) {
   }
 }
 
-// 如果发生了将入度为 1 的 bb 的 phi 直接替换成这个值的优化，则返回 true，gvn_gcm 需要这个信息，因为这可能产生新的优化机会
+// 如果发生了将入度为 1 的 bb 的 phi 直接替换成这个值的优化，则返回
+// true，gvn_gcm 需要这个信息，因为这可能产生新的优化机会
 // 如果不这样做，最终交给后端的 ir 可能包含常量间的二元运算，这是后端不允许的
 bool bbopt(IrFunc* f) {
   bool changed;
@@ -24,7 +25,8 @@ bool bbopt(IrFunc* f) {
         if (auto cond = dyn_cast<ConstValue>(x->cond.value)) {
           new JumpInst(cond->imm ? x->left : x->right, bb);
           deleted = cond->imm ? x->right : x->left;
-        } else if (x->left == x->right) {  // 可能被消除以 jump 结尾的空基本块引入
+        } else if (x->left ==
+                   x->right) {  // 可能被消除以 jump 结尾的空基本块引入
           new JumpInst(x->left, bb);
           deleted = x->right;
           changed = true;  // 可能引入新的以 jump 结尾的空基本块
@@ -45,16 +47,18 @@ bool bbopt(IrFunc* f) {
       }
     }
     // 这个循环消除以 jump 结尾的空基本块
-    // 简单起见不考虑第一个 bb，因为第一个 bb 是 entry，把它删了需要把新的 entry 移动到第一个来
+    // 简单起见不考虑第一个 bb，因为第一个 bb 是 entry，把它删了需要把新的 entry
+    // 移动到第一个来
     for (BasicBlock* bb = f->bb.head->next; bb;) {
       BasicBlock* next = bb->next;
       // 要求 target != bb，避免去掉空的死循环
       if (auto x = dyn_cast<JumpInst>(bb->insts.tail);
           x && x->next != bb && bb->insts.head == bb->insts.tail) {
         BasicBlock* target = x->next;
-        // 如果存在一个 pred，它以 BranchInst 结尾，且 left 或 right 已经为 target，且 target 中存在 phi，则不能把另一个也变成 bb
-        // 例如 bb1: { b = a + 1; if (x) br bb2 else br bb3 } bb2: { br bb3; }
-        // bb3: { c = phi [a, bb1] [b bb2] } 这时 bb2 起到了一个区分 phi 来源的作用
+        // 如果存在一个 pred，它以 BranchInst 结尾，且 left 或 right 已经为
+        // target，且 target 中存在 phi，则不能把另一个也变成 bb 例如 bb1: { b =
+        // a + 1; if (x) br bb2 else br bb3 } bb2: { br bb3; } bb3: { c = phi
+        // [a, bb1] [b bb2] } 这时 bb2 起到了一个区分 phi 来源的作用
         if (isa<PhiInst>(target->insts.head)) {
           for (BasicBlock* p : bb->pred) {
             if (auto br = dyn_cast<BranchInst>(p->insts.tail)) {
@@ -93,7 +97,8 @@ bool bbopt(IrFunc* f) {
 
   f->clear_all_vis();
   dfs(f->bb.head);
-  // 不可达的 bb 仍然可能有指向可达的 bb 的边，需要删掉目标 bb 中的 pred 和 phi 中的这一项
+  // 不可达的 bb 仍然可能有指向可达的 bb 的边，需要删掉目标 bb 中的 pred 和 phi
+  // 中的这一项
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
     if (!bb->vis) {
       for (BasicBlock* s : bb->succ()) {

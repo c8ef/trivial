@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 
 set(CMAKE_C_COMPILER clang)
 set(CMAKE_CXX_COMPILER clang++)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(trivial)
 
@@ -32,3 +33,5 @@ file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 add_executable(trivial ${SOURCES})
 target_link_libraries(trivial argparse spdlog)
+
+add_custom_target(format "clang-format" -i --style=file ${SOURCES} COMMENT "formatting source code")

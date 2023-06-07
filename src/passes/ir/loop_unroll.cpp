@@ -35,8 +35,8 @@ static void clone_inst(Inst* x, BasicBlock* bb,
 void loop_unroll(IrFunc* f) {
   std::vector<Loop*> deepest = compute_loop_info(f).deepest_loops();
   for (Loop* l : deepest) {
-    // 只考虑这样的循环，前端生成这样的 while 循环如果 body 内没有跳转，会被 bbopt 优化成这样
-    // bb_cond:
+    // 只考虑这样的循环，前端生成这样的 while 循环如果 body 内没有跳转，会被
+    // bbopt 优化成这样 bb_cond:
     //   ...
     //   if (i(0) < n) br bb_body else br bb_end
     //   或者 if (const 非 0) br bb_body else br bb_end
@@ -51,8 +51,8 @@ void loop_unroll(IrFunc* f) {
     //   if (i(x) < n) br bb_body else br bb_end // 注意这里是 i(x)，不是 i
     // bb_end:; preds = [bb_cond, bb_body]
     //   ...
-    // 其中 i 由循环中的一个 phi 定值，且来源仅有两个：初值 i0 和 i+常数，n 在循环外定值
-    // 大小关系可以是除了==, !=外的四个
+    // 其中 i 由循环中的一个 phi 定值，且来源仅有两个：初值 i0 和 i+常数，n
+    // 在循环外定值 大小关系可以是除了==, !=外的四个
     if (l->bbs.size() != 1) continue;
     BasicBlock* bb_body = l->bbs[0];
     if (bb_body->pred.size() != 2) continue;
@@ -92,11 +92,12 @@ void loop_unroll(IrFunc* f) {
                bb_end->pred.size() != 2)
       continue;
     u32 idx_in_end = bb_body == bb_end->pred[1];
-    BinaryInst* cond0;  // cond0 可能是 nullptr，此时 bb_cond 中以 if (const 非 0) br
-                        // bb_body else br bb_end 结尾
-    // 如果 bb_cond 是无条件跳转到 bb_body 的 (包括 cond0 本身是 const 或者上面处理的直接 jump)，这意味着循环体至少执行一次
-    // 但是我们 loop
-    // unroll 后就不能无条件跳转了，因为此时循环会至少执行两次，所以需要把 cond0 改成 BinaryInst 并且也要修改它的 n(在下面处理)
+    BinaryInst* cond0;  // cond0 可能是 nullptr，此时 bb_cond 中以 if (const 非
+                        // 0) br bb_body else br bb_end 结尾
+    // 如果 bb_cond 是无条件跳转到 bb_body 的 (包括 cond0 本身是 const
+    // 或者上面处理的直接 jump)，这意味着循环体至少执行一次 但是我们 loop unroll
+    // 后就不能无条件跳转了，因为此时循环会至少执行两次，所以需要把 cond0 改成
+    // BinaryInst 并且也要修改它的 n(在下面处理)
     {
       Value* v = br0->cond.value;
       if ((v->tag < Value::Tag::Lt || v->tag > Value::Tag::Gt) &&
@@ -132,7 +133,8 @@ void loop_unroll(IrFunc* f) {
           phi_ix = x;
           if (x->incoming_values[idx_in_body].value != ix) break;
           if (cond0) {
-            // 两个 cond 的 n 必须是同一个，这可以保证 bb_body 中的 cond 的 n 不是循环中定义的
+            // 两个 cond 的 n 必须是同一个，这可以保证 bb_body 中的 cond 的 n
+            // 不是循环中定义的
             if (cond->tag == cond0->tag && i0 == cond0->lhs.value &&
                 n == cond0->rhs.value) {
               cond0_i0 = 0;
@@ -144,10 +146,12 @@ void loop_unroll(IrFunc* f) {
             } else
               break;
           } else {
-            // 如果 cond0 是 ConstValue，则还是需要检查 n 的定义位置，并且把 cond0 改回 BinaryInst
+            // 如果 cond0 是 ConstValue，则还是需要检查 n 的定义位置，并且把
+            // cond0 改回 BinaryInst
             auto n1 = dyn_cast<Inst>(n);
             if (!n1 || n1->bb != bb_body) {
-              // cond0 是 ConstValue 一般是 i0 和 n 都是常数，不过为了保险还是检查一下
+              // cond0 是 ConstValue 一般是 i0 和 n
+              // 都是常数，不过为了保险还是检查一下
               if (auto i0c = dyn_cast<ConstValue>(i0),
                   nc = dyn_cast<ConstValue>(n);
                   i0c && nc &&
@@ -173,14 +177,16 @@ void loop_unroll(IrFunc* f) {
     for (Inst* i = bb_body->insts.head; inst_ok && i; i = i->next) {
       if (isa<PhiInst>(i) || isa<BranchInst>(i)) continue;
       // 包含 call 的循环没有什么展开的必要
-      // 目前不考虑有局部数组的情形，memdep 应该不能处理多个局部数组对应同一个 Decl
+      // 目前不考虑有局部数组的情形，memdep 应该不能处理多个局部数组对应同一个
+      // Decl
       else if (isa<CallInst>(i) || isa<AllocaInst>(i) || ++inst_cnt >= 16)
         inst_ok = false;
     }
     if (!inst_ok) continue;
 
     dbg("Performing loop unroll");
-    // 验证结束，循环展开，目前为了实现简单仅展开 2 次，如果实现正确的话运行 n 次就可以展开 2^n 次
+    // 验证结束，循环展开，目前为了实现简单仅展开 2 次，如果实现正确的话运行 n
+    // 次就可以展开 2^n 次
     std::unordered_map<Value*, Value*> map;
     auto get = [&map](Value* v) {
       auto it = map.find(v);
@@ -197,8 +203,8 @@ void loop_unroll(IrFunc* f) {
     }
 
     Value* old_n = (&cond->lhs)[!cond_ix].value;
-    bb_body->insts.remove(
-        br);  // 后面需要往 bb_body 的最后 insert，所以先把跳转指令去掉，等下再加回来
+    bb_body->insts.remove(br);  // 后面需要往 bb_body 的最后
+                                // insert，所以先把跳转指令去掉，等下再加回来
     Inst* orig_last =
         bb_body->insts
             .tail;  // 不可能为 null，因为 bb_body 中至少存在一条计算 i1 的指令
@@ -281,11 +287,13 @@ void loop_unroll(IrFunc* f) {
       auto if_cond = new BinaryInst(cond->tag, nullptr, nullptr, bb_if);
       new BranchInst(if_cond, bb_last, bb_end, bb_if);
       // 这一步是构造 bb_if 中的 phi，它来自 bb_body 和 bb_end 的 phi
-      // (bb_body 和 bb_end 的 phi 并不一定完全一样，有可能一个值只在循环内用到，也有可能一个循环内定义的值循环中却没有用到)
-      // 循环 1 构造来自 bb_body 的 phi，顺便将来自 bb_body 的 phi 的来自 bb_body 的值修改为新值
-      // 循环 2 修改 map，将来自 bb_body 的 phi 映射到刚刚插入的 phi
-      // 循环 3 构造来自 bb_end 的 phi
-      // 循环 1 和 2 不能合并，否则违背了 phi 的 parallel 的特性，当 bb_body 中的一个 phi 作为另一个 phi 的操作数时，就可能出错
+      // (bb_body 和 bb_end 的 phi
+      // 并不一定完全一样，有可能一个值只在循环内用到，也有可能一个循环内定义的值循环中却没有用到)
+      // 循环 1 构造来自 bb_body 的 phi，顺便将来自 bb_body 的 phi 的来自
+      // bb_body 的值修改为新值 循环 2 修改 map，将来自 bb_body 的 phi
+      // 映射到刚刚插入的 phi 循环 3 构造来自 bb_end 的 phi 循环 1 和 2
+      // 不能合并，否则违背了 phi 的 parallel 的特性，当 bb_body 中的一个 phi
+      // 作为另一个 phi 的操作数时，就可能出错
       for (Inst* i = bb_body->insts.head;; i = i->next) {
         if (auto x = dyn_cast<PhiInst>(i)) {
           Value *from_cond = x->incoming_values[!idx_in_body].value,

@@ -33,8 +33,8 @@ static Value* find_eq(VN& vn, BinaryInst* x) {
   return x;
 }
 
-// GetElementPtrInst 和 LoadInst 的 find_eq 中，对 x->arr.value 的递归搜索最终会终止于 AllocaInst,
-// ParamRef, GlobalRef，它们直接用指针比较
+// GetElementPtrInst 和 LoadInst 的 find_eq 中，对 x->arr.value
+// 的递归搜索最终会终止于 AllocaInst, ParamRef, GlobalRef，它们直接用指针比较
 static Value* find_eq(VN& vn, GetElementPtrInst* x) {
   for (u32 i = 0; i < vn.size(); ++i) {
     auto [k, v] = vn[i];
@@ -97,7 +97,8 @@ static Value* vn_of(VN& vn, Value* x) {
       std::find_if(vn.begin(), vn.end(),
                    [x](std::pair<Value*, Value*> kv) { return kv.first == x; });
   if (it != vn.end()) return it->second;
-  // 此时没有指针相等的，但是仍然要找是否存在实际相等的，如果没有的话它的 vn 就是 x
+  // 此时没有指针相等的，但是仍然要找是否存在实际相等的，如果没有的话它的 vn
+  // 就是 x
   u32 idx = vn.size();
   vn.emplace_back(x, x);
   if (auto y = dyn_cast<BinaryInst>(x))
@@ -115,10 +116,10 @@ static Value* vn_of(VN& vn, Value* x) {
 // 把形如 b = a + 1; c = b + 1 的 c 转化成 a + 2
 // 乘法：b = a * C1, c = b * C2 => a * (C1 * C2)
 // 加减总共 9 种情况，b 和 c 都可以是 Add, Sub,
-// Rsb，首先把 Sub 都变成 Add 负值，剩下四种情况 a + C1; b + C2 => a + (C1 + C2) a +
-// C1; rsb b C2 => rsb a (C2 - C1) rsb a C1; b + C2 => rsb a (C1 + C2) rsb a C1;
-// rsb b C2 => a + (C2 - C1) 故两个操作符相同时结果为 Add，否则为 Rsb;
-// c 为 Add 是 C2 前是正号，否则是负号
+// Rsb，首先把 Sub 都变成 Add 负值，剩下四种情况 a + C1; b + C2 => a + (C1 + C2)
+// a + C1; rsb b C2 => rsb a (C2 - C1) rsb a C1; b + C2 => rsb a (C1 + C2) rsb a
+// C1; rsb b C2 => a + (C2 - C1) 故两个操作符相同时结果为 Add，否则为 Rsb; c 为
+// Add 是 C2 前是正号，否则是负号
 static void try_fold_lhs(BinaryInst* x) {
   if (auto r = dyn_cast<ConstValue>(x->rhs.value)) {
     if (x->tag == Value::Tag::Sub)
@@ -144,7 +145,8 @@ static void try_fold_lhs(BinaryInst* x) {
   }
 }
 
-// 把 i 放到 new_bb 的末尾。这个 bb 中的位置不重要，因为后续还会再调整它在 bb 中的位置
+// 把 i 放到 new_bb 的末尾。这个 bb 中的位置不重要，因为后续还会再调整它在 bb
+// 中的位置
 static void transfer_inst(Inst* i, BasicBlock* new_bb) {
   i->bb->insts.remove(i);
   i->bb = new_bb;
@@ -211,10 +213,11 @@ static void schedule_late(std::unordered_set<Inst*>& vis, LoopInfo& info,
           auto y = static_cast<PhiInst*>(u1);
           auto it = std::find_if(y->incoming_values.begin(),
                                  y->incoming_values.end(), [u](const Use& u2) {
-                                   // 这里必须比较 Use 的地址，而不能比较 u2.value
-                                   // == i 因为一个 Phi 可以有多个相同的输入，例如
-                                   // phi [0, bb1] [%x0, bb2] [%x0, bb3]
-                                   // 如果找 u2.value ==
+                                   // 这里必须比较 Use 的地址，而不能比较
+                                   // u2.value
+                                   // == i 因为一个 Phi
+                                   // 可以有多个相同的输入，例如 phi [0, bb1]
+                                   // [%x0, bb2] [%x0, bb3] 如果找 u2.value ==
                                    // i 的，那么两次查找都会返回 [%x0,
                                    // bb2]，导致后面认为只有一个 bb 用到了%x0
                                    return &u2 == u;
@@ -223,13 +226,15 @@ static void schedule_late(std::unordered_set<Inst*>& vis, LoopInfo& info,
         }
         lca = lca ? find_lca(lca, use) : use;
       }
-      // lca 为空即没有人使用它，这并不是什么有意义的情形，而且也没法知道这条指令该放在哪里了
+      // lca
+      // 为空即没有人使用它，这并不是什么有意义的情形，而且也没法知道这条指令该放在哪里了
       // 因此在 gvn_gcm pass 前需要先运行一遍 dce pass，保证没有这种情形
       assert(lca != nullptr);
       BasicBlock* best = lca;
       u32 best_loop_depth = info.depth_of(best);
       // 论文里是 while (lca !=
-      // i->bb)，但是我觉得放在 x->bb 也是可以的，所以改成了考虑完 lca 后再判断是否等于 x->bb
+      // i->bb)，但是我觉得放在 x->bb 也是可以的，所以改成了考虑完 lca
+      // 后再判断是否等于 x->bb
       while (true) {
         u32 cur_loop_depth = info.depth_of(lca);
         if (cur_loop_depth < best_loop_depth) {
@@ -256,9 +261,10 @@ static void schedule_late(std::unordered_set<Inst*>& vis, LoopInfo& info,
   }
 }
 
-// 现在的依赖关系有点复杂，gvn_gcm 的第一阶段需要 memdep，第二阶段需要 memdep 和 dce,
-// 而 dce 会清除 memdep 的结果 不是很方便在 pass
-// manager 里表示这种关系，所以只能在第一阶段前手动调用 memdep，第二阶段前手动依次调用 dce 和 memdep
+// 现在的依赖关系有点复杂，gvn_gcm 的第一阶段需要 memdep，第二阶段需要 memdep 和
+// dce, 而 dce 会清除 memdep 的结果 不是很方便在 pass manager
+// 里表示这种关系，所以只能在第一阶段前手动调用 memdep，第二阶段前手动依次调用
+// dce 和 memdep
 void gvn_gcm(IrFunc* f) {
   bbopt(f);
 again:
@@ -331,15 +337,16 @@ again:
             }
           }
           if (replaced)
-            replace(x,
-                    ConstValue::get(x->lhs_sym->FlattenInitList[offset]->result));
+            replace(x, ConstValue::get(
+                           x->lhs_sym->FlattenInitList[offset]->result));
         }
         if (!replaced) replace(i, vn_of(vn, i));
       } else if (isa<GetElementPtrInst>(i) || is_pure_call(i)) {
         replace(i, vn_of(vn, i));
       } else if (isa<StoreInst>(i)) {
-        // 这里没有必要做替换，把 StoreInst 放进 vn 的目的是让 LoadInst 可以用 store 的右手项
-        // vn 中一定不含这个 i，因为没有人用到 StoreInst(唯一用到 StoreInst 的地方是 mem_token，但是没有加入 vn)
+        // 这里没有必要做替换，把 StoreInst 放进 vn 的目的是让 LoadInst 可以用
+        // store 的右手项 vn 中一定不含这个 i，因为没有人用到 StoreInst(唯一用到
+        // StoreInst 的地方是 mem_token，但是没有加入 vn)
         vn.emplace_back(i, i);
       }
       // 没有必要主动把其他指令加入 vn，如果它们被用到的话自然会被加入的
@@ -358,7 +365,8 @@ again:
   vis.clear();
   for (Inst* i : insts) schedule_late(vis, info, i);
   // fixme:
-  // 其实本质上这个算法是没办法决定一个 bb 内的任何顺序的，需要别的调度策略，这里简单做一个，激活 cmp
+  // 其实本质上这个算法是没办法决定一个 bb
+  // 内的任何顺序的，需要别的调度策略，这里简单做一个，激活 cmp
   // + branch 的优化
   for (BasicBlock* bb = entry; bb; bb = bb->next) {
     if (auto x = dyn_cast<BranchInst>(bb->insts.tail)) {

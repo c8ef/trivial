@@ -27,7 +27,8 @@ void compute_dom_info(IrFunc* f) {
     for (BasicBlock* bb = entry->next; bb; bb = bb->next) {
       for (auto it = bb->dom_by.begin(); it != bb->dom_by.end();) {
         BasicBlock* x = *it;
-        // 如果 bb 的任何一个 pred 的 dom 不包含 x，那么 bb 的 dom 也不应该包含 x
+        // 如果 bb 的任何一个 pred 的 dom 不包含 x，那么 bb 的 dom 也不应该包含
+        // x
         if (x != bb &&
             std::any_of(bb->pred.begin(), bb->pred.end(), [x](BasicBlock* p) {
               return p->dom_by.find(x) == p->dom_by.end();
@@ -64,7 +65,8 @@ void compute_dom_info(IrFunc* f) {
 }
 
 // 在 dom tree 上后序遍历，识别所有循环
-// 在所有递归调用中用的是同一个 worklist，这只是为了减少内存申请，它们之间没有任何关系
+// 在所有递归调用中用的是同一个
+// worklist，这只是为了减少内存申请，它们之间没有任何关系
 static void collect_loops(LoopInfo& info, std::vector<BasicBlock*>& worklist,
                           BasicBlock* header) {
   for (BasicBlock* s : header->doms) {
@@ -93,7 +95,8 @@ static void collect_loops(LoopInfo& info, std::vector<BasicBlock*>& worklist,
         while (Loop* p = sub->parent) sub = p;  // 找到已发现的最外层的 loop
         if (sub != l) {
           sub->parent = l;
-          // 只需考虑 sub 的 header 的 pred，因为根据循环的性质，循环中其他 bb 的 pred 必然都在循环内
+          // 只需考虑 sub 的 header 的 pred，因为根据循环的性质，循环中其他 bb
+          // 的 pred 必然都在循环内
           for (BasicBlock* pred : sub->header()->pred) {
             auto it = info.loop_of_bb.find(pred);
             if (it == info.loop_of_bb.end() || it->second != sub) {
@@ -108,7 +111,8 @@ static void collect_loops(LoopInfo& info, std::vector<BasicBlock*>& worklist,
 
 // 填充 Loop::bbs, sub_loops, LoopInfo::top_level
 // todo:
-// llvm 是依据 bb 的后序遍历来填的，这个顺序不会影响任何内容的存在与否，只会影响内容的顺序，那么这个顺序重要吗？
+// llvm 是依据 bb
+// 的后序遍历来填的，这个顺序不会影响任何内容的存在与否，只会影响内容的顺序，那么这个顺序重要吗？
 static void populate(LoopInfo& info, BasicBlock* bb) {
   if (bb->vis) return;
   bb->vis = true;

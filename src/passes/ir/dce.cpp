@@ -18,7 +18,8 @@ again:
       if (i->has_side_effect()) dfs(vis, i);
     }
   }
-  // 无用的指令间可能相互使用，所以需要先清空 operand，否则 delete 的时候会试图维护已经 delete 掉的指令的 uses
+  // 无用的指令间可能相互使用，所以需要先清空 operand，否则 delete
+  // 的时候会试图维护已经 delete 掉的指令的 uses
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {
     for (Inst* i = bb->insts.head; i; i = i->next) {
       if (vis.find(i) == vis.end()) {

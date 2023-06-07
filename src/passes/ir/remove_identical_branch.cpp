@@ -2,8 +2,8 @@
 
 static bool not_singly_used(Inst* i) { return i->uses.head != i->uses.tail; }
 
-// 目前这个 pass 的唯一作用是针对 mv 测例进行优化，它经过前面的优化之后得到的 pattern 类似
-// bb_if:
+// 目前这个 pass 的唯一作用是针对 mv 测例进行优化，它经过前面的优化之后得到的
+// pattern 类似 bb_if:
 //   ...
 //   if (x == 0) br bb_then else br bb_else
 // bb_then:

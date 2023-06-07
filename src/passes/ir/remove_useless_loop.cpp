@@ -55,7 +55,8 @@ bool remove_useless_loop(IrFunc* f) {
         // 检查是否被循环外的指令使用
         // LLVM 的 LoopDeletion
         // Pass 不检查这个，而是在上面一个循环中，检查 fst 是否是循环中定义的
-        // 这是因为它保证当前的 IR 是 LCSSA 的形式，任何循环中定义的值想要被被外界使用，都需要经过 PHI
+        // 这是因为它保证当前的 IR 是 LCSSA
+        // 的形式，任何循环中定义的值想要被被外界使用，都需要经过 PHI
         // 我们没有这个保证，所以不能这样检查
         for (Use* u = i->uses.head; u; u = u->next) {
           if (std::find(l->bbs.begin(), l->bbs.end(), u->user->bb) ==
