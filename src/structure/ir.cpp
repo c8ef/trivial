@@ -184,7 +184,7 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
         os << "i32 ";
       } else {
         // array arg
-        os << "i32 * ";
+        os << "ptr ";
       }
 
       os << "%" << p.name;
@@ -204,8 +204,8 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
       os << "\t%_glob_" << d->name << " = getelementptr inbounds ";
       PrintDims(os, d->dims.data(), d->dims.data() + d->dims.size());
       os << ", ";
-      PrintDims(os, d->dims.data(), d->dims.data() + d->dims.size());
-      os << "* @_" << d->name;
+      os << "ptr ";
+      os << "@_" << d->name;
       if (d->dims.empty()) {
         os << ", i32 0" << '\n';
       } else {
@@ -257,9 +257,7 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
           PrintDims(os, x->sym->dims.data(),
                     x->sym->dims.data() + x->sym->dims.size());
           os << ", ";
-          PrintDims(os, x->sym->dims.data(),
-                    x->sym->dims.data() + x->sym->dims.size());
-          os << "* %t" << temp;
+          os << "ptr %t" << temp;
           if (x->sym->dims.empty()) {
             os << ", i32 0" << '\n';
           } else {
@@ -271,18 +269,18 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
           os << "%t" << temp << " = mul i32 " << PV(value_index, x->index.value)
              << ", " << x->multiplier << '\n';
           os << "\t" << PV(value_index, inst)
-             << " = getelementptr inbounds i32, i32* "
+             << " = getelementptr inbounds i32, ptr "
              << PV(value_index, x->arr.value) << ", i32 "
              << "%t" << temp << '\n';
         } else if (auto* x = dyn_cast<StoreInst>(inst)) {
           os << "; store " << value_index.Get(x) << '\n' << "\t";
           // temp ptr
           u32 temp = value_index.Alloc();
-          os << "%t" << temp << " = getelementptr inbounds i32, i32";
-          os << "* " << PV(value_index, x->arr.value) << ", ";
+          os << "%t" << temp << " = getelementptr inbounds i32, ptr ";
+          os << PV(value_index, x->arr.value) << ", ";
           os << "i32 " << PV(value_index, x->index.value);
           os << '\n';
-          os << "\tstore i32 " << PV(value_index, x->data.value) << ", i32* %t"
+          os << "\tstore i32 " << PV(value_index, x->data.value) << ", ptr %t"
              << temp << ", align 4" << '\n';
         } else if (auto* x = dyn_cast<LoadInst>(inst)) {
           if (x->mem_token.value) {
@@ -292,11 +290,11 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
           }
           // temp ptr
           u32 temp = value_index.Alloc();
-          os << "%t" << temp << " = getelementptr inbounds i32, i32";
-          os << "* " << PV(value_index, x->arr.value) << ", ";
+          os << "%t" << temp << " = getelementptr inbounds i32, ptr ";
+          os << PV(value_index, x->arr.value) << ", ";
           os << "i32 " << PV(value_index, x->index.value);
           os << '\n';
-          os << "\t" << PV(value_index, inst) << " = load i32, i32* %t" << temp
+          os << "\t" << PV(value_index, inst) << " = load i32, ptr %t" << temp
              << ", align 4" << '\n';
         } else if (auto* x = dyn_cast<BinaryInst>(inst)) {
           const auto* op_name = BinaryInst::kLLVMOps[static_cast<int>(x->tag)];
@@ -353,7 +351,7 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
               os << "i32 ";
             } else {
               // array param
-              os << "i32 * ";
+              os << "ptr ";
             }
             // arg
             os << PV(value_index, x->args[i].value);
