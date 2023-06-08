@@ -31,10 +31,12 @@ using CompilePass = std::variant<IrFuncPass, IrProgramPass, MachineFuncPass,
                                  MachineProgramPass>;
 using PassDesc = std::pair<CompilePass, const char*>;
 
+namespace {
+
 #define DEFINE_PASS(p) \
   { p, #p }
 
-static PassDesc ir_passes[] = {
+PassDesc ir_passes[] = {
     DEFINE_PASS(compute_callgraph),
     DEFINE_PASS(mark_global_const),
     DEFINE_PASS(mem2reg),
@@ -57,12 +59,13 @@ static PassDesc ir_passes[] = {
     DEFINE_PASS(remove_unused_function),
 };
 
-static PassDesc asm_passes[] = {
+PassDesc asm_passes[] = {
     DEFINE_PASS(allocate_register),  DEFINE_PASS(simplify_asm),
     DEFINE_PASS(compute_stack_info), DEFINE_PASS(instruction_schedule),
     DEFINE_PASS(simplify_asm),       DEFINE_PASS(if_to_cond)};
 
 #undef DEFINE_PASS
+}  // namespace
 
 template <class... Ts>
 struct overloaded : Ts... {
