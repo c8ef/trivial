@@ -10,6 +10,7 @@
 #include "asm/scheduling.hpp"
 #include "asm/simplify_asm.hpp"
 #include "ir/ComputeCallGraph.hpp"
+#include "ir/MarkGlobalConst.hpp"
 #include "ir/RemoveUnusedFunction.hpp"
 #include "ir/bbopt.hpp"
 #include "ir/cfg.hpp"
@@ -19,7 +20,6 @@
 #include "ir/gvn_gcm.hpp"
 #include "ir/inline_func.hpp"
 #include "ir/loop_unroll.hpp"
-#include "ir/mark_global_const.hpp"
 #include "ir/mem2reg.hpp"
 #include "ir/remove_identical_branch.hpp"
 
@@ -38,7 +38,7 @@ namespace {
 
 PassDesc ir_passes[] = {
     DEFINE_PASS(ComputeCallGraph),
-    DEFINE_PASS(mark_global_const),
+    DEFINE_PASS(MarkGlobalConst),
     DEFINE_PASS(mem2reg),
     DEFINE_PASS(gvn_gcm),
     DEFINE_PASS(ComputeCallGraph),
