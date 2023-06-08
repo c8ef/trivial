@@ -16,7 +16,7 @@ void compute_stack_info(MachineFunc* f) {
       }
     }
   }
-  dbg(f->func->func->name, f->used_callee_saved_regs);
+  // DEBUG(f->func->func->name, f->used_callee_saved_regs);
 
   // fixup arg access
   // r4-r11, lr

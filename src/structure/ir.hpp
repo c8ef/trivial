@@ -142,19 +142,19 @@ struct IrFunc {
 
   Func* func;
   IntrusiveList<BasicBlock> bb;
-  // functions called by this function
+  // functions called by this function, calculated by ComputeCallGraph
   std::set<IrFunc*> callee_func;
-  // functions calling this function
+  // functions calling this function, calculated by ComputeCallGraph
   std::set<IrFunc*> caller_func;
+  // the function is builtin function like getint
   bool builtin;
+  // the function modify global variable, calculated by ComputeCallGraph
   bool load_global;
-  // has_side_effect:
-  // 修改了全局变量/传入的数组参数，或者调用了has_side_effect的函数 no side
-  // effect函数的没有user的调用可以删除
+  // calculated by ComputeCallGraph
   bool has_side_effect;
   bool can_inline;
 
-  // pure函数的参数相同的调用可以删除
+  // we can delete pure function call when arguments are same
   [[nodiscard]] bool Pure() const { return !(load_global || has_side_effect); }
 
   // 将所有bb的vis置false

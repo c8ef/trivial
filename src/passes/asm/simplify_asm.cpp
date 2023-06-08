@@ -5,23 +5,23 @@ void simplify_asm(MachineFunc* f) {
     for (auto inst = bb->instructions.head; inst; inst = inst->next) {
       if (auto x = dyn_cast<MIMove>(inst)) {
         if (x->dst.is_equiv(x->rhs) && x->is_simple()) {
-          dbg("Removed identity move");
+          DEBUG("Removed identity move");
           bb->instructions.Remove(inst);
         } else if (auto y = dyn_cast_nullable<MIMove>(inst->next)) {
           if (y->dst.is_equiv(x->dst) && !y->rhs.is_equiv(x->dst) &&
               y->is_simple()) {
-            dbg("Removed useless move");
+            DEBUG("Removed useless move");
             bb->instructions.Remove(inst);
           }
         }
       } else if (auto x = dyn_cast<MIBinary>(inst)) {
         if (x->isIdentity()) {
-          dbg("Removed identity binary operation");
+          DEBUG("Removed identity binary operation");
           bb->instructions.Remove(inst);
         }
       } else if (auto x = dyn_cast<MIJump>(inst)) {
         if (x->target == bb->next) {
-          dbg("Removed unconditional jump to next bb");
+          DEBUG("Removed unconditional jump to next bb");
           bb->instructions.Remove(inst);
         }
       } else if (auto x = dyn_cast<MILoad>(inst)) {
@@ -33,7 +33,7 @@ void simplify_asm(MachineFunc* f) {
             // ldr r2, [r1, #0]
             // ldr can be optimized to:
             // mov r2, r0
-            dbg("Removed unneeded load");
+            DEBUG("Removed unneeded load");
             auto i = new MIMove(x->next);
             i->dst = x->dst;
             i->rhs = y->data;
@@ -54,7 +54,7 @@ void simplify_asm(MachineFunc* f) {
               // movne	r1, #1
               // moveq	r1, #0
               // the last `moveq` can be removed
-              dbg("Simplify vreg != 0");
+              DEBUG("Simplify vreg != 0");
               bb->instructions.Remove(z);
             }
           }

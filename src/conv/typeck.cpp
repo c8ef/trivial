@@ -65,8 +65,7 @@ void Env::CheckDecl(Decl& d) {
       // ref:
       // https://stackoverflow.com/questions/11868087/avoiding-powers-of-2-for-cache-friendliness
       if (e->result >= 256 && (e->result & (e->result - 1)) == 0) {
-        spdlog::debug("extend dimension from {} to {}", e->result,
-                      e->result + 10);
+        DEBUG("extend dimension from {} to {}", e->result, e->result + 10);
         e->result += 10;
       }
       // after type check, int[2][3][4] -> {24, 12, 4}

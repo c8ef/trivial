@@ -184,7 +184,7 @@ void loop_unroll(IrFunc* f) {
     }
     if (!inst_ok) continue;
 
-    dbg("Performing loop unroll");
+    DEBUG("Performing loop unroll");
     // 验证结束，循环展开，目前为了实现简单仅展开 2 次，如果实现正确的话运行 n
     // 次就可以展开 2^n 次
     std::unordered_map<Value*, Value*> map;

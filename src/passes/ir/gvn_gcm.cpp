@@ -292,7 +292,7 @@ again:
       Inst* next = i->next;
       if (auto x = dyn_cast<BinaryInst>(i)) {
         if (isa<ConstValue>(x->lhs.value) && x->SwapOperand()) {
-          dbg("IMM operand moved from lhs to rhs");
+          DEBUG("IMM operand moved from lhs to rhs");
         }
         auto l = dyn_cast<ConstValue>(x->lhs.value),
              r = dyn_cast<ConstValue>(x->rhs.value);

@@ -40,7 +40,7 @@ void if_to_cond(MachineFunc* f) {
         }
 
         if (can_optimize) {
-          dbg("Optimizing branches to conditional execution");
+          DEBUG("Optimizing branches to conditional execution");
           bb->instructions.Remove(b);
           ArmCond cond = opposite_cond(b->cond);
           for (auto inst = bb2->instructions.head; inst; inst = inst->next) {

@@ -31,7 +31,7 @@ void mark_global_const(IrProgram* p) {
       d->is_const = true;
       auto global_const =
           "Marking global variable '" + std::string(d->name) + "' as const";
-      dbg(global_const);
+      DEBUG(global_const);
     }
   }
 }

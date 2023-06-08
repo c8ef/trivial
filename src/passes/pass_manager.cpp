@@ -9,8 +9,9 @@
 #include "asm/if_to_cond.hpp"
 #include "asm/scheduling.hpp"
 #include "asm/simplify_asm.hpp"
+#include "ir/ComputeCallGraph.hpp"
+#include "ir/RemoveUnusedFunction.hpp"
 #include "ir/bbopt.hpp"
-#include "ir/callgraph.hpp"
 #include "ir/cfg.hpp"
 #include "ir/dce.hpp"
 #include "ir/dead_store_elim.hpp"
@@ -21,7 +22,6 @@
 #include "ir/mark_global_const.hpp"
 #include "ir/mem2reg.hpp"
 #include "ir/remove_identical_branch.hpp"
-#include "ir/remove_unused_function.hpp"
 
 using IrFuncPass = void (*)(IrFunc*);
 using IrProgramPass = void (*)(IrProgram*);
@@ -37,11 +37,11 @@ namespace {
   { p, #p }
 
 PassDesc ir_passes[] = {
-    DEFINE_PASS(compute_callgraph),
+    DEFINE_PASS(ComputeCallGraph),
     DEFINE_PASS(mark_global_const),
     DEFINE_PASS(mem2reg),
     DEFINE_PASS(gvn_gcm),
-    DEFINE_PASS(compute_callgraph),
+    DEFINE_PASS(ComputeCallGraph),
     DEFINE_PASS(gvn_gcm),
 
     DEFINE_PASS(loop_unroll),
@@ -55,8 +55,8 @@ PassDesc ir_passes[] = {
     DEFINE_PASS(extract_stack_array),
     DEFINE_PASS(inline_func),
     DEFINE_PASS(gvn_gcm),
-    DEFINE_PASS(compute_callgraph),
-    DEFINE_PASS(remove_unused_function),
+    DEFINE_PASS(ComputeCallGraph),
+    DEFINE_PASS(RemoveUnusedFunction),
 };
 
 PassDesc asm_passes[] = {
@@ -75,9 +75,9 @@ template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
 static inline void run_pass(IntermediateProgram p, const PassDesc& desc) {
-  auto& pass = std::get<0>(desc);
-  auto run_pass = std::string("Running pass ") + std::get<1>(desc);
-  dbg(run_pass);
+  const auto& pass = std::get<0>(desc);
+  DEBUG("running pass: {}", std::get<1>(desc));
+
   std::visit(
       overloaded{[&](IrProgram* p) {
                    std::visit(overloaded{[&](IrFuncPass pass) {
@@ -87,7 +87,7 @@ static inline void run_pass(IntermediateProgram p, const PassDesc& desc) {
                                            }
                                          },
                                          [&](IrProgramPass pass) { pass(p); },
-                                         [](auto arg) { UNREACHABLE(); }},
+                                         [](auto) { UNREACHABLE(); }},
                               pass);
                  },
                  [&](MachineProgram* p) {
@@ -99,7 +99,7 @@ static inline void run_pass(IntermediateProgram p, const PassDesc& desc) {
                                     }
                                   },
                                   [&](MachineProgramPass pass) { pass(p); },
-                                  [](auto arg) { UNREACHABLE(); }},
+                                  [](auto) { UNREACHABLE(); }},
                        pass);
                  }},
       p);

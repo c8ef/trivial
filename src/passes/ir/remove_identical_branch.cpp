@@ -51,7 +51,7 @@ void remove_identical_branch(IrFunc* f) {
       continue;
     auto i5 = dyn_cast<StoreInst>(i4->next);
     if (!i5 || i5->arr.value != i1->arr.value || i5->next != j2) continue;
-    dbg("Performing remove identical branch");
+    DEBUG("Performing remove identical branch");
     bb->instructions.Remove(br);
     delete br;
     new JumpInst(right, bb);

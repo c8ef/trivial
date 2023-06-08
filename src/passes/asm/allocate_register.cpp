@@ -142,7 +142,7 @@ void liveness_analysis(MachineFunc* f) {
 void allocate_register(MachineProgram* p) {
   for (auto f = p->func.head; f; f = f->next) {
     auto loop_info = compute_loop_info(f->func);
-    dbg(f->func->func->name);
+    DEBUG(f->func->func->name);
     bool done = false;
     while (!done) {
       liveness_analysis(f);
@@ -186,7 +186,7 @@ void allocate_register(MachineProgram* p) {
         if (adj_set.find({u, v}) == adj_set.end() && u != v) {
           if (debug_mode) {
             auto interference = std::string(u) + " <-> " + std::string(v);
-            dbg(interference);
+            DEBUG(interference);
           }
           adj_set.insert({u, v});
           adj_set.insert({v, u});
@@ -536,7 +536,7 @@ void allocate_register(MachineProgram* p) {
         if (debug_mode) {
           for (auto& [before, after] : colored) {
             auto colored = std::string(before) + " => " + std::string(after);
-            dbg(colored);
+            DEBUG(colored);
           }
         }
 
@@ -581,7 +581,7 @@ void allocate_register(MachineProgram* p) {
         for (auto& n : spilled_nodes) {
           auto spill = "Spilling v" + std::to_string(n.value) +
                        " with loop count of " + std::to_string(loop_cnt[n]);
-          dbg(spill);
+          DEBUG(spill);
           // allocate on stack
           for (auto bb = f->bb.head; bb; bb = bb->next) {
             auto offset = f->stack_size;

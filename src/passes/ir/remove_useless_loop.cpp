@@ -66,7 +66,7 @@ bool remove_useless_loop(IrFunc* f) {
       }
     }
 
-    dbg("Removing useless loop");
+    DEBUG("Removing useless loop");
     changed = true;
     {
       bool found = false;

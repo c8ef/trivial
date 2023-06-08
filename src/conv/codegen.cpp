@@ -32,7 +32,7 @@ static MachineOperand generate_imm_operand(i32 imm, MachineBB* mbb,
   } else {
     auto imm_split = "Immediate number " + std::to_string(imm) +
                      " cannot be encoded, converting to MIMove";
-    dbg(imm_split);
+    DEBUG(imm_split);
     // use MIMove, which automatically splits if necessary
     auto vreg = MachineOperand::V(current_virtual_max++);
     if (mbb->control_transfer_inst) {
@@ -223,7 +223,7 @@ MachineProgram* machine_code_generation(IrProgram* p) {
             auto move_inst = new MIMove(mbb);
             move_inst->dst = dst;
             move_inst->rhs = arr;
-            dbg("offset 0 eliminated in getelementptr");
+            DEBUG("offset 0 eliminated in getelementptr");
           } else if (y) {
             // dst <- arr + result
             auto off = mult * y->imm;
@@ -234,7 +234,7 @@ MachineProgram* machine_code_generation(IrProgram* p) {
             add_inst->rhs = imm_operand;
             auto offset_const = "offset calculated to constant " +
                                 std::to_string(off) + " in getelementptr";
-            dbg(offset_const);
+            DEBUG(offset_const);
           } else if ((mult & (mult - 1)) == 0) {
             // dst <- arr + index << log(mult)
             auto index = resolve(x->index.value, mbb);
@@ -247,7 +247,7 @@ MachineProgram* machine_code_generation(IrProgram* p) {
             auto fuse_mul_add =
                 "MUL " + std::to_string(mult) +
                 " and ADD fused into shifted ADD in getelementptr";
-            dbg(fuse_mul_add);
+            DEBUG(fuse_mul_add);
           } else {
             // dst <- arr
             auto index = resolve_no_imm(x->index.value, mbb);
@@ -264,7 +264,7 @@ MachineProgram* machine_code_generation(IrProgram* p) {
             fma_inst->lhs = index;
             fma_inst->rhs = move_mult->dst;
             fma_inst->acc = dst;
-            dbg("MUL and ADD fused into SMLAL");
+            DEBUG("MUL and ADD fused into SMLAL");
           }
           new MIComment("end getelementptr", mbb);
         } else if (auto x = dyn_cast<ReturnInst>(inst)) {
@@ -389,7 +389,7 @@ MachineProgram* machine_code_generation(IrProgram* p) {
               if (!can_encode_imm(imm) && can_encode_imm(-imm)) {
                 auto negative_imm = "Imm " + std::to_string(imm) +
                                     " can be encoded in negative form";
-                dbg(negative_imm);
+                DEBUG(negative_imm);
                 imm = -imm;
                 x->tag = x->tag == Value::Tag::Add ? Value::Tag::Sub
                                                    : Value::Tag::Add;
@@ -414,7 +414,7 @@ MachineProgram* machine_code_generation(IrProgram* p) {
             auto y = dyn_cast<BinaryInst>(x->next);
             if (y && (y->tag == Value::Tag::Add || y->tag == Value::Tag::Sub) &&
                 y->rhs.value == x) {
-              dbg("Multiply-Add/Sub fused to MLA/MLS");
+              DEBUG("Multiply-Add/Sub fused to MLA/MLS");
               auto x3 = resolve(y->lhs.value, mbb);
               auto x4 = resolve(y, mbb);
               // x4 <- x3
@@ -466,7 +466,7 @@ MachineProgram* machine_code_generation(IrProgram* p) {
             if (x->uses.head == x->uses.tail && x->uses.head &&
                 isa<BranchInst>(x->uses.head->user) &&
                 x->next == x->uses.head->user) {
-              dbg("Binary comparison inst not computing result");
+              DEBUG("Binary comparison inst not computing result");
               cond_map.insert({x, {new_inst, cond}});
             } else {
               auto mv1_inst = new MIMove(mbb);
@@ -530,7 +530,7 @@ MachineProgram* machine_code_generation(IrProgram* p) {
         } else if (auto x = dyn_cast<BranchInst>(inst)) {
           ArmCond c;
           if (auto it = cond_map.find(x->cond.value); it != cond_map.end()) {
-            dbg("Branch uses flags registers instead of using comparison");
+            DEBUG("Branch uses flags registers instead of using comparison");
             mbb->control_transfer_inst = it->second.first;
             c = it->second.second;
           } else {

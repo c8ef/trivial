@@ -36,7 +36,7 @@ std::ostream& operator<<(std::ostream& os, const MachineProgram& p) {
       auto sec_name = insert_pool(true);
       auto force_pool = "forcibly insert constant pool " + sec_name +
                         ", instruction count: " + std::to_string(old_count);
-      dbg(force_pool);
+      DEBUG(force_pool);
     }
   };
 
@@ -181,7 +181,7 @@ std::ostream& operator<<(std::ostream& os, const MachineProgram& p) {
             //            to_string((i32)imm) + " in MIMove split to " +
             //                              to_string(high_bits) + " and " +
             //                              to_string(low_bits);
-            //            dbg(move_split);
+            //            DEBUG(move_split);
             //            // output asm
             //            os << "@ original imm: " << (i32)imm << endl;
             //            os << std::hex;

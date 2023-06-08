@@ -96,7 +96,7 @@ void extract_stack_array(IrProgram* p) {
               auto extract_array = "Extract local array " +
                                    std::string(alloc->sym->name) +
                                    " to global " + *name;
-              dbg(extract_array);
+              DEBUG(extract_array);
               auto extracted_decl = new Decl{true,
                                              true,
                                              true,

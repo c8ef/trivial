@@ -70,11 +70,12 @@ int main(int argc, char* argv[]) {
 
   Parser parser(lexer);
   Program program = parser.ParseProgram();
-  spdlog::debug("parsing success");
+  DEBUG("Parsing Success");
   TypeCheck(program);
-  spdlog::debug("type check success");
+  DEBUG("Type Check Success");
 
   auto* ir = ConvertSSA(program);
+  DEBUG("IR Gen Success");
 
   if (opt) {
     run_passes(ir);

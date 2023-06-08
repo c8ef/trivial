@@ -6,8 +6,7 @@
 #include "argparse/argparse.hpp"
 #include "spdlog/spdlog.h"
 
-#define DBG_MACRO_NO_WARNING
-#include "thirdparty/dbg.h"
+#define DEBUG(...) spdlog::debug(__VA_ARGS__)
 
 #define ERROR(...)              \
   do {                          \

@@ -44,7 +44,7 @@ void inline_func(IrProgram* p) {
       {
         auto inline_func = "Inlining " + std::string(callee->func->name) +
                            " into " + std::string(f->func->name);
-        dbg(inline_func);
+        DEBUG(inline_func);
       }
       bb_map.clear(), val_map.clear(), sym_map.clear(), ret_map.clear();
       std::vector<Use>& args = x->args;
