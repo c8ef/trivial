@@ -35,7 +35,7 @@ inline Expr::Tag GetBinaryOp(Operator op) {
     case Operator::LogicOr:
       return Expr::Or;
     default:
-      spdlog::error("Parser error: invalid binary operator");
+      ERROR("Parser error: invalid binary operator");
       return Expr::Add;
   }
 }
@@ -58,7 +58,7 @@ Program Parser::ParseProgram() {
       type = Keyword::Void;
       NextToken();
     } else {
-      spdlog::error("Parser error: invalid type");
+      ERROR("Parser error: invalid type");
       return {};
     }
 
@@ -97,7 +97,7 @@ Func Parser::ParseFunction(Keyword ret_type, const std::string& id) {
 
   Stmt* block = ParseBlock();
   if (!block) {
-    spdlog::error("Parser error: expect function block");
+    ERROR("Parser error: expect function block");
     return {};
   }
 
@@ -108,7 +108,7 @@ Func Parser::ParseFunction(Keyword ret_type, const std::string& id) {
 
 Decl Parser::ParseParam() {
   if (!IsTokenKeyword(Keyword::Int)) {
-    spdlog::error("Parser error: param type name can only be int");
+    ERROR("Parser error: param type name can only be int");
     return {};
   }
   NextToken();
@@ -242,7 +242,7 @@ Stmt* Parser::ParseStmt() {
         return new DeclStmt{{Stmt::DeclStmt}, decls};
       }
       default:
-        spdlog::error("Parser error: invalid keyword");
+        ERROR("Parser error: invalid keyword");
     }
   }
 
@@ -373,7 +373,7 @@ Expr* Parser::ParseUnary() {
         return new Binary{
             {Expr::Eq, 0}, new IntConst{{Expr::IntConst, 0}, 0}, ParseUnary()};
       default:
-        spdlog::error("Parser error: expect unary operator");
+        ERROR("Parser error: expect unary operator");
         return nullptr;
     }
   }
@@ -412,7 +412,7 @@ Expr* Parser::ParseIntConst() {
     NextToken();
     return expr;
   }
-  spdlog::error("Parser error: expect integer constant");
+  ERROR("Parser error: expect integer constant");
   return nullptr;
 }
 
@@ -467,7 +467,7 @@ std::vector<Expr*> Parser::ParseArrayDims0() {
 
 bool Parser::ExpectChar(char c) {
   if (!IsTokenChar(c)) {
-    spdlog::error("Parser error: expected '{}'", c);
+    ERROR("Parser error: expected '{}'", c);
     return false;
   }
   NextToken();
@@ -476,7 +476,7 @@ bool Parser::ExpectChar(char c) {
 
 bool Parser::ExpectId() {
   if (cur_token_ != Token::Id) {
-    spdlog::error("Parser error: expected identifier");
+    ERROR("Parser error: expected identifier");
     return false;
   }
   return true;

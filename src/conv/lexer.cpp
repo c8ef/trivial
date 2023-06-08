@@ -41,7 +41,7 @@ bool IsOperatorChar(char c) {
 }  // namespace
 
 Token Lexer::LogError(std::string_view message) {
-  spdlog::error("Lexer error: {}", message);
+  ERROR("Lexer error: {}", message);
   return Token::Error;
 }
 

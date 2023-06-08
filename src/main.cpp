@@ -34,8 +34,7 @@ int main(int argc, char* argv[]) {
   try {
     cli.parse_args(argc, argv);
   } catch (const std::runtime_error& err) {
-    spdlog::error(err.what());
-    exit(1);
+    ERROR(err.what());
   }
 
   bool print_pass = false;
