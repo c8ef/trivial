@@ -3,3 +3,4 @@ native/
 aarch32-gcc/
 temp
 temp.s
+temp.ll

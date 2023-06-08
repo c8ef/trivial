@@ -2,12 +2,6 @@
 
 TrivialCompiler is a compiler written in C++17 that translates SysY (a C-like toy language) into ARM-v7a assembly.
 
-## Architecture
-
-![Architecture of TrivialCompiler](architecture.png)
-
-Errata: the `.bc` should be `.ll` in the picture.
-
 ## Usage
 
 ```
@@ -25,29 +19,6 @@ Options:
 You must specify either `-l` or `-o`, or nothing will actually happen.
 
 You could refer to `CMakeLists.txt` on how to converting LLVM IR or assembly to executable file on `ARM-v7a` by using `llc` or `gcc` for assembling and linking.
-
-## Testing
-
-We use `ctest` to automatically test `TrivialCompiler` against several modern compilers. For running tests you need to install the following additional packages and their dependencies:
-
-- `llvm` (to test IR output)
-- `g++-arm-linux-gnueabihf`
-- `qemu-user` (if not running on ARM-v7a architecture)
-
-Several test cases and corresponding configurable CMake flags are provided:
-
-- `FUNC_TEST` (default `ON`): function test cases provided by the contest committee
-- `PERF_TEST` (default `ON`): performance test cases provided by the contest committee
-- `CUSTOM_TEST` (default `ON`): test cases written by the authors
-
-And there are more flags to configure whether to use modern compilers to compare with TrivialCompiler
-
-- `GCC` (default `OFF`): use GCC to compile (`-Ofast`) to compare
-- `CLANG` (default `OFF`): use Clang (`-Ofast`) to compare, needs `clang` to be installed
-
-After configuring CMake, use `ctest` under your build directory to run all tests.
-
-The results containing stdout and stderr can be located at `build/Testing/Temporary/LastTest.log`. You could use `utils/extract_result.py` to analyze the results and write it into a JSON file.
 
 ```cmake
 foreach(case_file ${all_test_cases})
