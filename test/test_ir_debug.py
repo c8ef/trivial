@@ -5,7 +5,10 @@ import subprocess
 from subprocess import TimeoutExpired
 import sys
 
-dirs = ['../testcase/functional']
+dirs = [
+    '../testcase/functional',
+    '../testcase/performance',
+]
 
 exe = 'temp'
 asm = 'temp.s'
