@@ -132,7 +132,8 @@ void ConvertStmt(SSAContext* ctx, Stmt* stmt) {
   if (auto* x = dyn_cast<DeclStmt>(stmt)) {
     for (auto& decl : x->decls) {
       // alloca for local variable
-      auto* inst = new AllocaInst(&decl, ctx->bb);
+      // we always put alloca to the first basic block of current function
+      auto* inst = new AllocaInst(&decl, ctx->func->bb.head);
       decl.value = inst;
 
       if (decl.has_init) {

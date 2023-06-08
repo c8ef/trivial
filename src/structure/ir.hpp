@@ -210,8 +210,13 @@ struct Inst : Value {
     bb->instructions.InsertBefore(this, insert_before);
   }
 
-  Inst(Tag tag, BasicBlock* insert_at_end) : Value(tag), bb(insert_at_end) {
-    bb->instructions.InsertAtEnd(this);
+  Inst(Tag tag, BasicBlock* basic_block) : Value(tag), bb(basic_block) {
+    // only alloca will be inserted to the beginning of a basic block
+    if (tag == Tag::Alloca) {
+      bb->instructions.InsertAtBegin(this);
+    } else {
+      bb->instructions.InsertAtEnd(this);
+    }
   }
 
   // 只初始化tag，没有加入到链表中，调用者手动加入

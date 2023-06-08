@@ -247,21 +247,24 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
            inst = inst->next) {
         os << "\t";
         if (auto* x = dyn_cast<AllocaInst>(inst)) {
-          // temp ptr
-          u32 temp = value_index.Alloc();
-          os << "%t" << temp << " = alloca ";
-          PrintDims(os, x->sym->dims.data(),
-                    x->sym->dims.data() + x->sym->dims.size());
-          os << ", align 4" << '\n';
-          os << "\t" << PV(value_index, inst) << " = getelementptr inbounds ";
-          PrintDims(os, x->sym->dims.data(),
-                    x->sym->dims.data() + x->sym->dims.size());
-          os << ", ";
-          os << "ptr %t" << temp;
           if (x->sym->dims.empty()) {
-            os << ", i32 0" << '\n';
-          } else {
-            os << ", i32 0, i32 0" << '\n';
+            os << PV(value_index, inst) << " = alloca i32, align 4" << '\n';
+          } else {  // temp ptr
+            u32 temp = value_index.Alloc();
+            os << "%t" << temp << " = alloca ";
+            PrintDims(os, x->sym->dims.data(),
+                      x->sym->dims.data() + x->sym->dims.size());
+            os << ", align 4" << '\n';
+            os << "\t" << PV(value_index, inst) << " = getelementptr inbounds ";
+            PrintDims(os, x->sym->dims.data(),
+                      x->sym->dims.data() + x->sym->dims.size());
+            os << ", ";
+            os << "ptr %t" << temp;
+            if (x->sym->dims.empty()) {
+              os << ", i32 0" << '\n';
+            } else {
+              os << ", i32 0, i32 0" << '\n';
+            }
           }
         } else if (auto* x = dyn_cast<GetElementPtrInst>(inst)) {
           os << "; getelementptr " << value_index.Get(inst) << '\n' << "\t";
@@ -274,28 +277,40 @@ std::ostream& operator<<(std::ostream& os, const IrProgram& p) {
              << "%t" << temp << '\n';
         } else if (auto* x = dyn_cast<StoreInst>(inst)) {
           os << "; store " << value_index.Get(x) << '\n' << "\t";
-          // temp ptr
-          u32 temp = value_index.Alloc();
-          os << "%t" << temp << " = getelementptr inbounds i32, ptr ";
-          os << PV(value_index, x->arr.value) << ", ";
-          os << "i32 " << PV(value_index, x->index.value);
-          os << '\n';
-          os << "\tstore i32 " << PV(value_index, x->data.value) << ", ptr %t"
-             << temp << ", align 4" << '\n';
+          if (auto* index = dyn_cast<ConstValue>(x->index.value);
+              index && index->imm == 0) {
+            os << "store i32 " << PV(value_index, x->data.value) << ", ptr ";
+            os << PV(value_index, x->arr.value) << '\n';
+          } else {
+            // temp ptr
+            u32 temp = value_index.Alloc();
+            os << "%t" << temp << " = getelementptr inbounds i32, ptr ";
+            os << PV(value_index, x->arr.value) << ", ";
+            os << "i32 " << PV(value_index, x->index.value);
+            os << '\n';
+            os << "\tstore i32 " << PV(value_index, x->data.value) << ", ptr %t"
+               << temp << ", align 4" << '\n';
+          }
         } else if (auto* x = dyn_cast<LoadInst>(inst)) {
           if (x->mem_token.value) {
             os << "; load@" << x << " arr@" << x->arr.value << ", use "
                << PV(value_index, x->mem_token.value) << '\n'
                << "\t";
           }
-          // temp ptr
-          u32 temp = value_index.Alloc();
-          os << "%t" << temp << " = getelementptr inbounds i32, ptr ";
-          os << PV(value_index, x->arr.value) << ", ";
-          os << "i32 " << PV(value_index, x->index.value);
-          os << '\n';
-          os << "\t" << PV(value_index, inst) << " = load i32, ptr %t" << temp
-             << ", align 4" << '\n';
+          if (auto* index = dyn_cast<ConstValue>(x->index.value);
+              index && index->imm == 0) {
+            os << PV(value_index, inst) << " = load i32, ptr ";
+            os << PV(value_index, x->arr.value) << '\n';
+          } else {
+            // temp ptr
+            u32 temp = value_index.Alloc();
+            os << "%t" << temp << " = getelementptr inbounds i32, ptr ";
+            os << PV(value_index, x->arr.value) << ", ";
+            os << "i32 " << PV(value_index, x->index.value);
+            os << '\n';
+            os << "\t" << PV(value_index, inst) << " = load i32, ptr %t" << temp
+               << ", align 4" << '\n';
+          }
         } else if (auto* x = dyn_cast<BinaryInst>(inst)) {
           const auto* op_name = BinaryInst::kLLVMOps[static_cast<int>(x->tag)];
           bool conversion =
