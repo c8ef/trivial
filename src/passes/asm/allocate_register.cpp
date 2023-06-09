@@ -6,7 +6,7 @@
 #include <optional>
 #include <set>
 
-#include "passes/ir/cfg.hpp"
+#include "passes/ir/CFG.hpp"
 
 std::pair<std::vector<MachineOperand>, std::vector<MachineOperand>> get_def_use(
     MachineInst* inst) {
@@ -141,7 +141,7 @@ void liveness_analysis(MachineFunc* f) {
 // iterated register coalescing
 void allocate_register(MachineProgram* p) {
   for (auto f = p->func.head; f; f = f->next) {
-    auto loop_info = compute_loop_info(f->func);
+    auto loop_info = ComputeLoopInfo(f->func);
     DEBUG(f->func->func->name);
     bool done = false;
     while (!done) {
@@ -236,14 +236,14 @@ void allocate_register(MachineProgram* p) {
             for (auto& d : def) {
               if (d.needs_color()) {
                 live.erase(d);
-                loop_cnt[d] += loop_info.depth_of(bb->bb);
+                loop_cnt[d] += loop_info.DepthOf(bb->bb);
               }
             }
 
             for (auto& u : use) {
               if (u.needs_color()) {
                 live.insert(u);
-                loop_cnt[u] += loop_info.depth_of(bb->bb);
+                loop_cnt[u] += loop_info.DepthOf(bb->bb);
               }
             }
           }

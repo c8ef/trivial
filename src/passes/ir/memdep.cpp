@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 
-#include "passes/ir/cfg.hpp"
+#include "passes/ir/CFG.hpp"
 #include "structure/ast.hpp"
 
 // 如果一个是另一个的 postfix，则可能 alias；nullptr 相当于通配符
@@ -114,7 +114,7 @@ void clear_memdep(IrFunc* f) {
 
 // 构造 load 对 store，store 对 load 的依赖关系，分成两趟分别计算
 void compute_memdep(IrFunc* f) {
-  compute_dom_info(f);
+  ComputeDomInfo(f);
   // 把所有数组地址相同的 load 一起考虑，因为相关的 store
   // 集合计算出来必定是一样的
   std::unordered_map<Decl*, LoadInfo> loads;
@@ -143,7 +143,7 @@ void compute_memdep(IrFunc* f) {
       }
     }
   }
-  auto df = compute_df(f);
+  auto df = ComputeDF(f);
   // 第一趟，构造 load 对 store 的依赖关系
   {
     std::vector<BasicBlock*> worklist;

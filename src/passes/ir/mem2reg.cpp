@@ -4,14 +4,14 @@
 #include <unordered_map>
 
 #include "passes/ir/BasicBlockOpt.hpp"
-#include "passes/ir/cfg.hpp"
+#include "passes/ir/CFG.hpp"
 #include "structure/ast.hpp"
 
 // 这里假定 dom 树已经造好了
 void mem2reg(IrFunc* f) {
   // 删除所有不可达 bb，以防计算 dom 时出现问题
   BasicBlockOpt(f);
-  compute_dom_info(f);
+  ComputeDomInfo(f);
   std::unordered_map<Value*, u32>
       alloca_ids;  // 把 alloca 映射到整数，后面有好几个 vector 用这个做下标
   std::vector<Value*> allocas;
@@ -37,7 +37,7 @@ void mem2reg(IrFunc* f) {
       }
     }
   }
-  auto df = compute_df(f);
+  auto df = ComputeDF(f);
   // mem2reg 算法阶段 1：放置 phi 节点
   // worklist 定义在循环外面，只是为了减少申请内存的次数
   std::vector<BasicBlock*> worklist;  // 用 stack 还是 queue 在这里没有本质区别

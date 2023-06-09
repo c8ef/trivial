@@ -2,7 +2,7 @@
 
 #include <cassert>
 
-#include "passes/ir/cfg.hpp"
+#include "passes/ir/CFG.hpp"
 #include "structure/op.hpp"
 
 static void clone_inst(Inst* x, BasicBlock* bb,
@@ -33,7 +33,7 @@ static void clone_inst(Inst* x, BasicBlock* bb,
 
 // 这个 pass 不能处理 memdep 信息，需要保证调用它时没有 memdep 信息
 void loop_unroll(IrFunc* f) {
-  std::vector<Loop*> deepest = compute_loop_info(f).deepest_loops();
+  std::vector<Loop*> deepest = ComputeLoopInfo(f).DeepestLoops();
   for (Loop* l : deepest) {
     // 只考虑这样的循环，前端生成这样的 while 循环如果 body 内没有跳转，会被
     // BasicBlockOpt 优化成这样 bb_cond:

@@ -1,9 +1,9 @@
 #include "passes/ir/remove_useless_loop.hpp"
 
-#include "passes/ir/cfg.hpp"
+#include "passes/ir/CFG.hpp"
 
 bool remove_useless_loop(IrFunc* f) {
-  std::vector<Loop*> deepest = compute_loop_info(f).deepest_loops();
+  std::vector<Loop*> deepest = ComputeLoopInfo(f).DeepestLoops();
   bool changed = false;
   for (Loop* l : deepest) {
     // 变量需要提前定义，因为 goto 不能跳过变量初始化

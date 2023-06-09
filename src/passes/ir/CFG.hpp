@@ -1,16 +1,61 @@
-#include "passes/ir/cfg.hpp"
+#pragma once
 
-#include <cassert>
+#include <unordered_map>
+
+#include "structure/ir.hpp"
+
+struct Loop {
+  Loop* parent{};
+  std::vector<Loop*> sub_loops;
+  // bbs[0]是loop header
+  std::vector<BasicBlock*> bbs;
+
+  explicit Loop(BasicBlock* header) : bbs{header} {}
+
+  BasicBlock* Header() { return bbs[0]; }
+
+  // 对于顶层的循环返回1
+  u64 Depth() {
+    u64 ret = 0;
+    for (Loop* x = this; x; x = x->parent) ++ret;
+    return ret;
+  }
+
+  void GetDeepestLoops(std::vector<Loop*>& deepest) {
+    if (sub_loops.empty())
+      deepest.push_back(this);
+    else
+      for (Loop* x : sub_loops) x->GetDeepestLoops(deepest);
+  }
+};
+
+struct LoopInfo {
+  // 返回bb所处的最深的循环
+  std::unordered_map<BasicBlock*, Loop*> loop_of_bb;
+  std::vector<Loop*> top_level;
+
+  // 若bb不在任何循环中，返回0
+  u32 DepthOf(BasicBlock* bb) {
+    auto it = loop_of_bb.find(bb);
+    return it == loop_of_bb.end() ? 0 : it->second->Depth();
+  }
+
+  std::vector<Loop*> DeepestLoops() {
+    std::vector<Loop*> deepest;
+    for (Loop* l : top_level) l->GetDeepestLoops(deepest);
+    return deepest;
+  }
+};
 
 // 计算 dom_level
-static void dfs(BasicBlock* bb, u32 dom_level) {
+inline void CFGDFS(BasicBlock* bb, u32 dom_level) {
   bb->dom_level = dom_level;
   for (BasicBlock* ch : bb->doms) {
-    dfs(ch, dom_level + 1);
+    CFGDFS(ch, dom_level + 1);
   }
 }
 
-void compute_dom_info(IrFunc* f) {
+inline void ComputeDomInfo(IrFunc* f) {
   BasicBlock* entry = f->bb.head;
   // 计算 dom_by
   entry->dom_by = {entry};
@@ -61,16 +106,16 @@ void compute_dom_info(IrFunc* f) {
       }
     }
   }
-  dfs(entry, 0);
+  CFGDFS(entry, 0);
 }
 
 // 在 dom tree 上后序遍历，识别所有循环
 // 在所有递归调用中用的是同一个
 // worklist，这只是为了减少内存申请，它们之间没有任何关系
-static void collect_loops(LoopInfo& info, std::vector<BasicBlock*>& worklist,
-                          BasicBlock* header) {
+inline void CollectLoops(LoopInfo& info, std::vector<BasicBlock*>& worklist,
+                         BasicBlock* header) {
   for (BasicBlock* s : header->doms) {
-    if (s) collect_loops(info, worklist, s);
+    if (s) CollectLoops(info, worklist, s);
   }
   assert(worklist.empty());
   for (BasicBlock* p : header->pred) {  // 存在 p 到 header 的边
@@ -97,7 +142,7 @@ static void collect_loops(LoopInfo& info, std::vector<BasicBlock*>& worklist,
           sub->parent = l;
           // 只需考虑 sub 的 header 的 pred，因为根据循环的性质，循环中其他 bb
           // 的 pred 必然都在循环内
-          for (BasicBlock* pred : sub->header()->pred) {
+          for (BasicBlock* pred : sub->Header()->pred) {
             auto it = info.loop_of_bb.find(pred);
             if (it == info.loop_of_bb.end() || it->second != sub) {
               worklist.push_back(pred);
@@ -113,15 +158,15 @@ static void collect_loops(LoopInfo& info, std::vector<BasicBlock*>& worklist,
 // todo:
 // llvm 是依据 bb
 // 的后序遍历来填的，这个顺序不会影响任何内容的存在与否，只会影响内容的顺序，那么这个顺序重要吗？
-static void populate(LoopInfo& info, BasicBlock* bb) {
+inline void Populate(LoopInfo& info, BasicBlock* bb) {
   if (bb->vis) return;
   bb->vis = true;
   for (BasicBlock* s : bb->Succ()) {
-    if (s) populate(info, s);
+    if (s) Populate(info, s);
   }
   auto it = info.loop_of_bb.find(bb);
   Loop* sub = it == info.loop_of_bb.end() ? nullptr : it->second;
-  if (sub && sub->header() == bb) {
+  if (sub && sub->Header() == bb) {
     (sub->parent ? sub->parent->sub_loops : info.top_level).push_back(sub);
     std::reverse(sub->bbs.begin() + 1, sub->bbs.end());
     std::reverse(sub->sub_loops.begin(), sub->sub_loops.end());
@@ -130,36 +175,39 @@ static void populate(LoopInfo& info, BasicBlock* bb) {
   for (; sub; sub = sub->parent) sub->bbs.push_back(bb);
 }
 
-LoopInfo compute_loop_info(IrFunc* f) {
-  compute_dom_info(f);
+// 这里假定dom树已经造好了
+inline LoopInfo ComputeLoopInfo(IrFunc* f) {
+  ComputeDomInfo(f);
   LoopInfo info;
   std::vector<BasicBlock*> worklist;
-  collect_loops(info, worklist, f->bb.head);
+  CollectLoops(info, worklist, f->bb.head);
   f->ClearAllVis();
-  populate(info, f->bb.head);
+  Populate(info, f->bb.head);
   return info;
 }
 
-static void dfs(std::vector<BasicBlock*>& po, BasicBlock* bb) {
+inline void CFGDFS(std::vector<BasicBlock*>& po, BasicBlock* bb) {
   if (!bb->vis) {
     bb->vis = true;
     for (BasicBlock* x : bb->Succ()) {
-      if (x) dfs(po, x);
+      if (x) CFGDFS(po, x);
     }
     po.push_back(bb);
   }
 }
 
-std::vector<BasicBlock*> compute_rpo(IrFunc* f) {
+// 计算bb的rpo序
+inline std::vector<BasicBlock*> ComputeRPO(IrFunc* f) {
   std::vector<BasicBlock*> ret;
   f->ClearAllVis();
-  dfs(ret, f->bb.head);
+  CFGDFS(ret, f->bb.head);
   std::reverse(ret.begin(), ret.end());
   return ret;
 }
 
-std::unordered_map<BasicBlock*, std::unordered_set<BasicBlock*>> compute_df(
-    IrFunc* f) {
+// 计算支配边界DF，这里用一个map来存每个bb的df，其实是很随意的选择，把它放在BasicBlock里面也不是不行
+inline std::unordered_map<BasicBlock*, std::unordered_set<BasicBlock*>>
+ComputeDF(IrFunc* f) {
   std::unordered_map<BasicBlock*, std::unordered_set<BasicBlock*>> df;
   for (BasicBlock* from = f->bb.head; from; from = from->next) {
     for (BasicBlock* to : from->Succ()) {

@@ -1,10 +1,10 @@
 #include "structure/ir.hpp"
 
-inline void DFS(BasicBlock* bb) {
+inline void BBODFS(BasicBlock* bb) {
   if (!bb->vis) {
     bb->vis = true;
     for (BasicBlock* x : bb->Succ()) {
-      if (x) DFS(x);
+      if (x) BBODFS(x);
     }
   }
 }
@@ -119,7 +119,7 @@ inline bool BasicBlockOpt(IrFunc* f) {
   } while (changed);
 
   f->ClearAllVis();
-  DFS(f->bb.head);
+  BBODFS(f->bb.head);
   // unavailable basic block can have edges to available basic block
   // delete them first
   for (BasicBlock* bb = f->bb.head; bb; bb = bb->next) {

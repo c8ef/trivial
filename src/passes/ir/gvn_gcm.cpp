@@ -1,7 +1,7 @@
 #include "passes/ir/gvn_gcm.hpp"
 
 #include "passes/ir/BasicBlockOpt.hpp"
-#include "passes/ir/cfg.hpp"
+#include "passes/ir/CFG.hpp"
 #include "passes/ir/dce.hpp"
 #include "passes/ir/memdep.hpp"
 #include "structure/ast.hpp"
@@ -231,12 +231,12 @@ static void schedule_late(std::unordered_set<Inst*>& vis, LoopInfo& info,
       // 因此在 gvn_gcm pass 前需要先运行一遍 dce pass，保证没有这种情形
       assert(lca != nullptr);
       BasicBlock* best = lca;
-      u32 best_loop_depth = info.depth_of(best);
+      u32 best_loop_depth = info.DepthOf(best);
       // 论文里是 while (lca !=
       // i->bb)，但是我觉得放在 x->bb 也是可以的，所以改成了考虑完 lca
       // 后再判断是否等于 x->bb
       while (true) {
-        u32 cur_loop_depth = info.depth_of(lca);
+        u32 cur_loop_depth = info.DepthOf(lca);
         if (cur_loop_depth < best_loop_depth) {
           best = lca;
           best_loop_depth = cur_loop_depth;
@@ -271,7 +271,7 @@ again:
   BasicBlock* entry = f->bb.head;
   // 阶段 1，gvn
   compute_memdep(f);
-  std::vector<BasicBlock*> rpo = compute_rpo(f);
+  std::vector<BasicBlock*> rpo = ComputeRPO(f);
   VN vn;
   auto replace = [&vn](Inst* o, Value* n) {
     if (o != n) {
@@ -355,7 +355,7 @@ again:
   }
   clear_memdep(f), dce(f), compute_memdep(f);
   // 阶段 2，gcm
-  LoopInfo info = compute_loop_info(f);
+  LoopInfo info = ComputeLoopInfo(f);
   std::vector<Inst*> instructions;
   for (BasicBlock* bb = entry; bb; bb = bb->next) {
     for (Inst* i = bb->instructions.head; i; i = i->next)

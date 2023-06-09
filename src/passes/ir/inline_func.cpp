@@ -1,6 +1,6 @@
 #include "passes/ir/inline_func.hpp"
 
-#include "passes/ir/cfg.hpp"
+#include "passes/ir/CFG.hpp"
 #include "structure/ast.hpp"
 
 void inline_func(IrProgram* p) {
@@ -79,7 +79,7 @@ void inline_func(IrProgram* p) {
         bb_map.insert({bb, cloned});
         f->bb.InsertBefore(cloned, ret);
       }
-      for (BasicBlock* bb : compute_rpo(callee)) {
+      for (BasicBlock* bb : ComputeRPO(callee)) {
         BasicBlock* cloned = bb_map.find(bb)->second;
         for (BasicBlock* p : bb->pred) {
           cloned->pred.push_back(bb_map.find(p)->second);
