@@ -71,7 +71,7 @@ void loop_unroll(IrFunc* f) {
       assert(!isa<PhiInst>(bb_end->instructions.head));
       bb_cond->instructions.Remove(jump);
       delete jump;
-      br0 = new BranchInst(ConstValue::get(1), bb_body, bb_end, bb_cond);
+      br0 = new BranchInst(ConstValue::Get(1), bb_body, bb_end, bb_cond);
       bb_end->pred.push_back(bb_cond);
       for (Inst* i = bb_body->instructions.head; i; i = i->next) {
         PhiInst* phi = nullptr;
@@ -258,7 +258,7 @@ void loop_unroll(IrFunc* f) {
   // 特判失败了，还是展开 2 次
   normal_unroll:
     Value* new_i0 = new BinaryInst(
-        Value::Tag::Add, (&cond0->lhs)[cond0_i0].value, ConstValue::get(step),
+        Value::Tag::Add, (&cond0->lhs)[cond0_i0].value, ConstValue::Get(step),
         cond0 ? static_cast<Inst*>(cond0) : static_cast<Inst*>(br0));
     br0->cond.Set(new BinaryInst(cond0->tag, cond0_i0 == 0 ? new_i0 : old_n,
                                  cond0_i0 == 0 ? old_n : new_i0, cond0));
@@ -271,7 +271,7 @@ void loop_unroll(IrFunc* f) {
 
     Value* new_ix =
         new BinaryInst(Value::Tag::Add, get((&cond->lhs)[cond_ix].value),
-                       ConstValue::get(step), br);
+                       ConstValue::Get(step), br);
     Value* new_cond = new BinaryInst(cond->tag, cond_ix == 0 ? new_ix : old_n,
                                      cond_ix == 0 ? old_n : new_ix, br);
     br->cond.Set(new_cond);

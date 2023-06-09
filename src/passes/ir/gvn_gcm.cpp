@@ -123,22 +123,22 @@ static Value* vn_of(VN& vn, Value* x) {
 static void try_fold_lhs(BinaryInst* x) {
   if (auto r = dyn_cast<ConstValue>(x->rhs.value)) {
     if (x->tag == Value::Tag::Sub)
-      x->rhs.Set(r = ConstValue::get(-r->imm)), x->tag = Value::Tag::Add;
+      x->rhs.Set(r = ConstValue::Get(-r->imm)), x->tag = Value::Tag::Add;
     if (auto l = dyn_cast<BinaryInst>(x->lhs.value)) {
       if (auto lr = dyn_cast<ConstValue>(l->rhs.value)) {
         if (l->tag == Value::Tag::Sub)
-          l->rhs.Set(lr = ConstValue::get(-lr->imm)), l->tag = Value::Tag::Add;
+          l->rhs.Set(lr = ConstValue::Get(-lr->imm)), l->tag = Value::Tag::Add;
         if ((x->tag == Value::Tag::Add || x->tag == Value::Tag::Rsb) &&
             (l->tag == Value::Tag::Add || l->tag == Value::Tag::Rsb)) {
           x->lhs.Set(l->lhs.value);
-          x->rhs.Set(ConstValue::get(
+          x->rhs.Set(ConstValue::Get(
               r->imm + (x->tag == Value::Tag::Add ? lr->imm : -lr->imm)));
           x->tag = (x->tag == Value::Tag::Add) == (l->tag == Value::Tag::Add)
                        ? Value::Tag::Add
                        : Value::Tag::Rsb;
         } else if (x->tag == Value::Tag::Mul && r->tag == Value::Tag::Mul) {
           x->lhs.Set(l->lhs.value);
-          x->rhs.Set(ConstValue::get(lr->imm * r->imm));
+          x->rhs.Set(ConstValue::Get(lr->imm * r->imm));
         }
       }
     }
@@ -299,7 +299,7 @@ again:
         // for most instructions reach here, rhs is IMM
         if (l && r) {
           // both constant, evaluate and eliminate
-          replace(x, ConstValue::get(op::Eval((op::Op)x->tag, l->imm, r->imm)));
+          replace(x, ConstValue::Get(op::Eval((op::Op)x->tag, l->imm, r->imm)));
         } else {
           try_fold_lhs(x);
           if (auto value = x->OptimizedValue()) {
@@ -337,7 +337,7 @@ again:
             }
           }
           if (replaced)
-            replace(x, ConstValue::get(
+            replace(x, ConstValue::Get(
                            x->lhs_sym->flatten_init_list[offset]->result));
         }
         if (!replaced) replace(i, vn_of(vn, i));

@@ -170,7 +170,7 @@ struct ConstValue : Value {
   const i32 imm;
   static std::unordered_map<i32, ConstValue*> pool;
 
-  static ConstValue* get(i32 imm) {
+  static ConstValue* Get(i32 imm) {
     auto [it, inserted] = pool.insert({imm, nullptr});
     if (inserted) it->second = new ConstValue(imm);
     return it->second;
@@ -299,17 +299,17 @@ struct BinaryInst : Inst {
         case Tag::Sub:
           return r->imm == 0 ? lhs.value : nullptr;  // ADD or SUB 0
         case Tag::Mul:
-          if (r->imm == 0) return ConstValue::get(0);  // MUL 0
+          if (r->imm == 0) return ConstValue::Get(0);  // MUL 0
           [[fallthrough]];
         case Tag::Div:
           if (r->imm == 1) return lhs.value;  // MUL or DIV 1
         case Tag::Mod:
-          return r->imm == 1 ? ConstValue::get(0) : nullptr;  // MOD 1
+          return r->imm == 1 ? ConstValue::Get(0) : nullptr;  // MOD 1
         case Tag::And:
-          if (r->imm == 0) return ConstValue::get(0);  // AND 0
+          if (r->imm == 0) return ConstValue::Get(0);  // AND 0
           return r->imm == 1 ? lhs.value : nullptr;    // AND 1
         case Tag::Or:
-          if (r->imm == 1) return ConstValue::get(1);  // OR 1
+          if (r->imm == 1) return ConstValue::Get(1);  // OR 1
           return r->imm == 0 ? lhs.value : nullptr;    // OR 0
         default:
           return nullptr;

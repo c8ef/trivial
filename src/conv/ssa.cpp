@@ -24,7 +24,7 @@ Value* ConvertExpr(SSAContext* ctx, Expr* expr) {
       }
       if (x->tag == Expr::Or) {
         auto* inv =
-            new BinaryInst(Value::Tag::Eq, lhs, ConstValue::get(0), ctx->bb);
+            new BinaryInst(Value::Tag::Eq, lhs, ConstValue::Get(0), ctx->bb);
         new BranchInst(inv, rhs_bb, after_bb, ctx->bb);
       }
       // 这里需要 pred 的大小为 2，真正维护 pred 在最后才做，可以保证是 [当前
@@ -48,7 +48,7 @@ Value* ConvertExpr(SSAContext* ctx, Expr* expr) {
     return inst;
   }
   if (auto* x = dyn_cast<IntConst>(expr)) {
-    return ConstValue::get(x->val);
+    return ConstValue::Get(x->val);
   }
   if (auto* x = dyn_cast<Index>(expr)) {
     // evaluate dimensions first
@@ -64,7 +64,7 @@ Value* ConvertExpr(SSAContext* ctx, Expr* expr) {
       if (x->dims.empty()) {
         // direct access
         auto* inst = new LoadInst(x->lhs_sym, x->lhs_sym->value,
-                                  ConstValue::get(0), ctx->bb);
+                                  ConstValue::Get(0), ctx->bb);
         return inst;
       }  // all levels except last level, emit GetElementPtr
       Value* val = x->lhs_sym->value;
@@ -104,7 +104,7 @@ Value* ConvertExpr(SSAContext* ctx, Expr* expr) {
     }
     // access to array itself
     auto* inst = new GetElementPtrInst(x->lhs_sym, x->lhs_sym->value,
-                                       ConstValue::get(0), 0, ctx->bb);
+                                       ConstValue::Get(0), 0, ctx->bb);
     return inst;
   }
   if (auto* x = dyn_cast<Call>(expr)) {
@@ -140,7 +140,7 @@ void ConvertStmt(SSAContext* ctx, Stmt* stmt) {
         if (decl.init.val1) {
           // store the init value in the allocated memory
           auto* init = ConvertExpr(ctx, decl.init.val1);
-          new StoreInst(&decl, inst, init, ConstValue::get(0), ctx->bb);
+          new StoreInst(&decl, inst, init, ConstValue::Get(0), ctx->bb);
         } else {
           // assign each element of flatten_init_list
           // count how many elements are zero, if there are more than 10 zero
@@ -167,10 +167,10 @@ void ConvertStmt(SSAContext* ctx, Stmt* stmt) {
             // arr
             call_inst->args.emplace_back(inst, call_inst);
             // ch
-            call_inst->args.emplace_back(ConstValue::get(0), call_inst);
+            call_inst->args.emplace_back(ConstValue::Get(0), call_inst);
             // count = num * 4
             call_inst->args.emplace_back(
-                ConstValue::get(decl.dims[0]->result * 4), call_inst);
+                ConstValue::Get(decl.dims[0]->result * 4), call_inst);
           }
 
           for (u32 i = 0; i < decl.flatten_init_list.size(); i++) {
@@ -181,7 +181,7 @@ void ConvertStmt(SSAContext* ctx, Stmt* stmt) {
               }
             }
 
-            new StoreInst(&decl, inst, values[i], ConstValue::get(i), ctx->bb);
+            new StoreInst(&decl, inst, values[i], ConstValue::Get(i), ctx->bb);
           }
         }
       }
@@ -198,7 +198,7 @@ void ConvertStmt(SSAContext* ctx, Stmt* stmt) {
     auto* rhs = ConvertExpr(ctx, x->rhs);
 
     if (x->dims.empty()) {
-      new StoreInst(x->lhs_sym, x->lhs_sym->value, rhs, ConstValue::get(0),
+      new StoreInst(x->lhs_sym, x->lhs_sym->value, rhs, ConstValue::Get(0),
                     ctx->bb);
     } else {
       // all level except last level emit GetElementPtr, last level emit Store
@@ -334,7 +334,7 @@ IrProgram* ConvertSSA(Program& program) {
           auto* inst = new AllocaInst(&decl, entry_basic_block);
           decl.value = inst;
           // copy the actual data into the parameter
-          new StoreInst(&decl, inst, new ParamRef(&decl), ConstValue::get(0),
+          new StoreInst(&decl, inst, new ParamRef(&decl), ConstValue::Get(0),
                         entry_basic_block);
         } else {
           decl.value = new ParamRef(&decl);
@@ -350,7 +350,7 @@ IrProgram* ConvertSSA(Program& program) {
       // add extra return instruction for invalid basic block
       if (!ctx.bb->Valid()) {
         if (func->func->is_int) {
-          new ReturnInst(ConstValue::get(0), ctx.bb);
+          new ReturnInst(ConstValue::Get(0), ctx.bb);
         } else {
           new ReturnInst(nullptr, ctx.bb);
         }
