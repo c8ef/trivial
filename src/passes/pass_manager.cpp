@@ -21,7 +21,6 @@
 #include "ir/inline_func.hpp"
 #include "ir/loop_unroll.hpp"
 #include "ir/mem2reg.hpp"
-#include "ir/remove_identical_branch.hpp"
 
 using IrFuncPass = void (*)(IrFunc*);
 using IrProgramPass = void (*)(IrProgram*);
