@@ -18,8 +18,8 @@ bool Inst::HasSideEffect() {
   return false;
 }
 
-std::array<BasicBlock*, 2> BasicBlock::Succ() {
-  Inst* end = instructions.tail;  // 必须非空
+std::array<BasicBlock*, 2> BasicBlock::Succ() const {
+  Inst* end = instructions.tail;
   if (auto* x = dyn_cast<BranchInst>(end)) return {x->left, x->right};
   if (auto* x = dyn_cast<JumpInst>(end)) return {x->next, nullptr};
   if (isa<ReturnInst>(end)) return {nullptr, nullptr};

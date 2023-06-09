@@ -122,17 +122,19 @@ struct BasicBlock {
   DEFINE_LIST(BasicBlock)
 
   std::vector<BasicBlock*> pred;
-  BasicBlock* idom;
-  std::unordered_set<BasicBlock*> dom_by;  // 支配它的节点集
-  std::vector<BasicBlock*> doms;           // 它支配的节点集
-  u32 dom_level;                           // dom树中的深度，根深度为0
+  BasicBlock* immediate_dom;
+  // contains basic blocks that dominates this basic block
+  std::unordered_set<BasicBlock*> dom_by;
+  // contains basic blocks that this basic block dominates
+  std::vector<BasicBlock*> doms;
+  u32 dom_level;  // dom树中的深度，根深度为0
   // mark if the basic block has been visited
   // call ClearAllVis before use it
   bool vis;
   IntrusiveList<Inst> instructions;
   IntrusiveList<Inst> mem_phis;  // 元素都是MemPhiInst
 
-  std::array<BasicBlock*, 2> Succ();
+  [[nodiscard]] std::array<BasicBlock*, 2> Succ() const;
   std::array<BasicBlock**, 2> SuccRef();  // 想修改succ时使用
   // the last instruction of a valid basic block must be branch, jump or return
   [[nodiscard]] bool Valid() const;

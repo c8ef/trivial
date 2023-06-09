@@ -189,11 +189,11 @@ static void schedule_early(std::unordered_set<Inst*>& vis, BasicBlock* entry,
 }
 
 static BasicBlock* find_lca(BasicBlock* a, BasicBlock* b) {
-  while (b->dom_level < a->dom_level) a = a->idom;
-  while (a->dom_level < b->dom_level) b = b->idom;
+  while (b->dom_level < a->dom_level) a = a->immediate_dom;
+  while (a->dom_level < b->dom_level) b = b->immediate_dom;
   while (a != b) {
-    a = a->idom;
-    b = b->idom;
+    a = a->immediate_dom;
+    b = b->immediate_dom;
   }
   return a;
 }
@@ -242,7 +242,7 @@ static void schedule_late(std::unordered_set<Inst*>& vis, LoopInfo& info,
           best_loop_depth = cur_loop_depth;
         }
         if (lca == i->bb) break;
-        lca = lca->idom;
+        lca = lca->immediate_dom;
       }
       transfer_inst(i, best);
       for (Inst* j = best->instructions.head; j; j = j->next) {
