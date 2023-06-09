@@ -1,6 +1,6 @@
 #include "passes/ir/gvn_gcm.hpp"
 
-#include "passes/ir/bbopt.hpp"
+#include "passes/ir/BasicBlockOpt.hpp"
 #include "passes/ir/cfg.hpp"
 #include "passes/ir/dce.hpp"
 #include "passes/ir/memdep.hpp"
@@ -266,7 +266,7 @@ static void schedule_late(std::unordered_set<Inst*>& vis, LoopInfo& info,
 // 里表示这种关系，所以只能在第一阶段前手动调用 memdep，第二阶段前手动依次调用
 // dce 和 memdep
 void gvn_gcm(IrFunc* f) {
-  bbopt(f);
+  BasicBlockOpt(f);
 again:
   BasicBlock* entry = f->bb.head;
   // 阶段 1，gvn
@@ -383,5 +383,5 @@ again:
     }
   }
   clear_memdep(f);
-  if (bbopt(f)) goto again;
+  if (BasicBlockOpt(f)) goto again;
 }

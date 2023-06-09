@@ -126,7 +126,8 @@ struct BasicBlock {
   std::unordered_set<BasicBlock*> dom_by;  // 支配它的节点集
   std::vector<BasicBlock*> doms;           // 它支配的节点集
   u32 dom_level;                           // dom树中的深度，根深度为0
-  // 各种算法中用到，标记是否访问过，算法开头应把所有vis置false(调用IrFunc::clear_all_vis)
+  // mark if the basic block has been visited
+  // call ClearAllVis before use it
   bool vis;
   IntrusiveList<Inst> instructions;
   IntrusiveList<Inst> mem_phis;  // 元素都是MemPhiInst
@@ -157,7 +158,7 @@ struct IrFunc {
   // we can delete pure function call when arguments are same
   [[nodiscard]] bool Pure() const { return !(load_global || has_side_effect); }
 
-  // 将所有bb的vis置false
+  // clear all vis field of basic blocks
   void ClearAllVis() const {
     for (BasicBlock* b = bb.head; b; b = b->next) b->vis = false;
   }

@@ -3,14 +3,14 @@
 #include <algorithm>
 #include <unordered_map>
 
-#include "passes/ir/bbopt.hpp"
+#include "passes/ir/BasicBlockOpt.hpp"
 #include "passes/ir/cfg.hpp"
 #include "structure/ast.hpp"
 
 // 这里假定 dom 树已经造好了
 void mem2reg(IrFunc* f) {
   // 删除所有不可达 bb，以防计算 dom 时出现问题
-  bbopt(f);
+  BasicBlockOpt(f);
   compute_dom_info(f);
   std::unordered_map<Value*, u32>
       alloca_ids;  // 把 alloca 映射到整数，后面有好几个 vector 用这个做下标

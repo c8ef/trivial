@@ -36,7 +36,7 @@ void loop_unroll(IrFunc* f) {
   std::vector<Loop*> deepest = compute_loop_info(f).deepest_loops();
   for (Loop* l : deepest) {
     // 只考虑这样的循环，前端生成这样的 while 循环如果 body 内没有跳转，会被
-    // bbopt 优化成这样 bb_cond:
+    // BasicBlockOpt 优化成这样 bb_cond:
     //   ...
     //   if (i(0) < n) br bb_body else br bb_end
     //   或者 if (const 非 0) br bb_body else br bb_end
